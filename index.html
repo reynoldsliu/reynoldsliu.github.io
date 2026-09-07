@@ -78,6 +78,14 @@
       <div class="links"><a href="https://github.com/reynoldsliu/pw-agents">github →</a></div>
     </div>
 
+    <div class="card">
+      <div class="path">LLM_PROVIDER=gemini docpipe run meeting.txt</div>
+      <h3><a href="https://github.com/reynoldsliu/doc-pipeline">doc-pipeline</a></h3>
+      <p>會議逐字稿 → 標準化文件（會議紀要、決策紀錄）的 LLM pipeline。Provider 以環境變數抽換（Claude／Gemini 零程式碼切換）、prompt 模板是資料、內建 fake provider 讓測試與 CI 完全離線。</p>
+      <div class="tags"><span class="tag">Python</span><span class="tag">Claude API</span><span class="tag">Pipeline 設計</span><span class="tag">CI/CD</span></div>
+      <div class="links"><a href="https://github.com/reynoldsliu/doc-pipeline">github →</a></div>
+    </div>
+
   </div>
 </section>
 
@@ -88,7 +96,7 @@
     <li><strong>Spec-driven：</strong>每個專案以 SPEC.md / ROADMAP.md 為單一事實來源，AI 依規格實作、人負責驗收。規格書寫清楚「要什麼」，比修十次產出更省。</li>
     <li><strong>安全邊界設計：</strong>LLM 只能從白名單挑工具、填參數，永不執行原始文字；逃生艙預設關閉、開啟後仍有黑名單。邊界在程式碼，不在 prompt。</li>
     <li><strong>知識工程化：</strong>把團隊文件規範、SD 文件模板、測試資料轉換流程做成可版控的 skills —— onboarding 從「經驗傳承」變成可 diff、可 rollback 的工程物件。</li>
-    <li><strong>文件 pipeline 設計：</strong>會議逐字稿 → GitLab CI → LLM → SA/SD 文件（Wiki + docx）的自動化管線，LLM provider 以 CI 變數抽換、零程式碼切換。</li>
+    <li><strong>文件 pipeline 設計：</strong>會議逐字稿 → CI → LLM → 標準化文件的自動化管線，provider 以環境變數抽換、零程式碼切換 —— 開源實作見 <a href="https://github.com/reynoldsliu/doc-pipeline">doc-pipeline</a>。</li>
   </ul>
 </section>
 
