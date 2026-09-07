@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Task Flow Engine — 可設定的任務流程引擎 | Reynolds Liu</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+<article>
+<a class="back" href="../index.html">← 回作品集</a>
+<h1>Task Flow Engine — 可設定的任務流程引擎</h1>
+<p class="sub">企業金融授信平台的規則引擎 + 圖形化流程編輯器 · Java/Spring · Vue 3 + GoJS + Electron</p>
+
+<div class="note">
+本專案為企業內部系統，原始碼不公開；本頁呈現的是架構設計與我負責的部分。
+文中不含任何真實業務規則與客戶資訊。
+</div>
+
+<h2>問題</h2>
+<p>
+批次或流程型的金融業務，需要對多筆資料依規則執行一連串條件檢核，並依結果分支、迴圈。
+傳統做法把這些規則直接寫成程式碼 —— 規則一改就要改 code、測試、部署；
+程式碼隨規則膨脹，邏輯散落在各處難以追蹤。金融業的業務規則偏偏是變動最頻繁的東西。
+</p>
+
+<h2>設計：把流程邏輯資料化</h2>
+<pre class="mermaid">
+flowchart LR
+  A[業務規則變動頻繁] --> B[將流程邏輯資料化]
+  B --> C[規則儲存在資料表]
+  C --> D[引擎依規則執行 Task/Block]
+  D --> E[完整執行紀錄與追蹤]
+  E --> F[降低程式碼耦合與維護成本]
+</pre>
+<p>
+業務檢核不落入 codebase：所有流程邏輯以設定方式存於資料庫，
+引擎讀取設定、組合 Task/Block 執行。規則調整變成資料維護，不再是程式變更。
+搭配完整的 log 機制，每一步判斷都可回溯。
+</p>
+
+<h2>引擎能力</h2>
+<pre class="mermaid">
+mindmap
+  root((引擎支援功能))
+    邏輯判斷
+      EQUAL / NOT_EQUAL
+      GREATER / LESS
+      ALWAYS
+    流程控制
+      分支導向
+      FOR 迴圈
+      巢狀迴圈
+    資料能力
+      QUERY 自動查詢
+      OPERATOR 表達式運算
+      變數池暫存
+    擴充能力
+      自定義函數
+      結果收集
+</pre>
+<ul class="plain">
+  <li>各類邏輯檢驗（相等、大小比較、恆真），依結果導向預設分支</li>
+  <li>流程中自動資料查詢，查詢結果可供後續判斷使用</li>
+  <li>表達式語法支援四則運算、日期加減，結果可暫存至變數池</li>
+  <li>巢狀迴圈、自定義函數（Custom Function）、執行結果收集</li>
+</ul>
+
+<h2>Flow Studio：給人用的編輯器</h2>
+<p>
+規則存在資料表裡，對維護的人是災難 —— 所以配套做了圖形化編輯器：
+以 GoJS 呈現整條任務流程，直接在畫布上編輯節點屬性、調整分支，
+匯出／匯入 JSON 與資料表對接，另含執行 log 分析檢視。
+以 Electron 打包成桌面應用發佈給團隊使用，迭代 518 commits。
+</p>
+<table>
+  <tr><th>層</th><th>技術</th></tr>
+  <tr><td>引擎</td><td>Java · Spring Boot · 規則資料表 · 完整執行 log</td></tr>
+  <tr><td>編輯器</td><td>Vue 3（Composition API）· TypeScript · Vite · GoJS · PrimeVue</td></tr>
+  <tr><td>桌面打包</td><td>Electron Forge（Windows 發佈）</td></tr>
+  <tr><td>測試</td><td>Playwright E2E · Vitest</td></tr>
+</table>
+
+<h2>我學到的事</h2>
+<ul class="plain">
+  <li><strong>彈性有價格：</strong>規則資料化換來了不改 code 的彈性，也換來「設定即程式」的除錯難度 —— 所以 log 機制與視覺化編輯器不是加分項，是這個架構能活下來的必要條件。</li>
+  <li><strong>工具鏈完整才算交付：</strong>引擎、編輯器、log 分析、打包發佈，缺一角使用者就會回頭要求「還是寫死在 code 裡吧」。</li>
+</ul>
+
+<p><a class="back" href="../index.html">← 回作品集</a></p>
+</article>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"neutral"});
+</script>
+</body>
+</html>

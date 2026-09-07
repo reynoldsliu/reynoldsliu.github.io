@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reynolds Liu — 後端工程師 · AI + Architecture</title>
+<meta name="description" content="金融核心系統後端工程師。作品：任務流程引擎、AI 語音助理、macOS 套件管理 CLI、Playwright 測試工程。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="top">
+  <a href="#projects">作品</a>
+  <a href="#ai-workflow">AI 開發方式</a>
+  <a href="#quality">品質與測試</a>
+  <a href="#contact">聯絡</a>
+</nav>
+
+<header class="hero">
+  <h1>Reynolds Liu</h1>
+  <p class="sub">金融核心系統後端工程師 · Java / Spring · TypeScript · 朝 AI + Architecture 前進</p>
+  <p class="intro">
+    在銀行授信平台打造規則引擎與核階系統，把「業務邏輯不落 codebase」做成可設定、可追蹤的架構。
+    工作之外用 side project 驗證 LLM 應用的安全邊界設計。我相信作品比履歷誠實 —— 以下每一項都可以看、可以跑。
+  </p>
+</header>
+
+<section id="projects">
+  <h2>主要作品</h2>
+  <p class="section-note">依「架構深度 × 完成度」挑選，其餘散件見 <a href="https://github.com/reynoldsliu">GitHub</a>。</p>
+  <div class="grid">
+
+    <div class="card">
+      <h3><a href="projects/taskengine.html">Task Flow Engine — 可設定的任務流程引擎</a></h3>
+      <p>將頻繁變動的業務檢核規則從程式碼移到資料庫：引擎依設定執行 Task/Block、支援分支與巢狀迴圈，全程留下可追蹤的執行紀錄。含 Vue 3 + GoJS 圖形化流程編輯器（Electron 打包，518 commits）。</p>
+      <div class="tags"><span class="tag">Java / Spring Boot</span><span class="tag">Vue 3 + TypeScript</span><span class="tag">GoJS</span><span class="tag">架構設計</span></div>
+      <div class="links"><a href="projects/taskengine.html">架構介紹 →</a></div>
+    </div>
+
+    <div class="card">
+      <h3><a href="https://github.com/reynoldsliu/voice-mac-agent">voice-mac-agent — 語音控制 Mac 的 AI 助理</a></h3>
+      <p>Telegram 語音／文字指令控制自己的 Mac。本機優先（faster-whisper + ollama），雲端是明確選擇。核心設計：<strong>安全邊界在 Python、不在模型</strong> —— LLM 只能從白名單挑工具，永不執行原始文字。</p>
+      <div class="tags"><span class="tag">Python</span><span class="tag">LLM 工具安全</span><span class="tag">Whisper / ollama</span><span class="tag">Claude API</span></div>
+      <div class="links"><a href="https://github.com/reynoldsliu/voice-mac-agent">GitHub →</a></div>
+    </div>
+
+    <div class="card">
+      <h3><a href="https://github.com/reynoldsliu/appup">appup — 一個指令盤點整台 Mac 的軟體</a></h3>
+      <p>macOS 的套件散在 Homebrew、App Store、npm、pipx 與手動安裝之間互不知情。appup 全部問一遍、合併回答、標出過期與 EOL。單一 Python 檔、只用標準庫、零依賴、預設唯讀、附自我測試。</p>
+      <div class="tags"><span class="tag">Python（零依賴）</span><span class="tag">CLI 設計</span><span class="tag">macOS</span></div>
+      <div class="links"><a href="https://github.com/reynoldsliu/appup">GitHub →</a></div>
+    </div>
+
+    <div class="card">
+      <h3><a href="https://github.com/reynoldsliu/pw-agents">pw-agents — Playwright 測試工程與 a11y 標準</a></h3>
+      <p>30 天系統化的 Playwright 實作（locator 策略、網路攔截、auth state、平行化、自訂 matcher），加上一套可重用的無障礙（accessibility）測試標準與 review checklist。</p>
+      <div class="tags"><span class="tag">Playwright</span><span class="tag">TypeScript</span><span class="tag">Accessibility</span><span class="tag">E2E 測試</span></div>
+      <div class="links"><a href="https://github.com/reynoldsliu/pw-agents">GitHub →</a></div>
+    </div>
+
+  </div>
+</section>
+
+<section id="ai-workflow">
+  <h2>我的 AI 開發方式</h2>
+  <p class="section-note">AI 不是自動完成，是可以被工程化的工作流。以下是我實際在用的做法。</p>
+  <ul class="plain">
+    <li><strong>Spec-driven：</strong>每個專案以 SPEC.md / ROADMAP.md 為單一事實來源，AI 依規格實作、人負責驗收。規格書寫清楚「要什麼」，比修十次產出更省。</li>
+    <li><strong>安全邊界設計：</strong>LLM 只能從白名單挑工具、填參數，永不執行原始文字；逃生艙預設關閉、開啟後仍有黑名單。邊界在程式碼，不在 prompt。</li>
+    <li><strong>知識工程化：</strong>把團隊文件規範、SD 文件模板、測試資料轉換流程做成可版控的 Claude Code skills —— onboarding 文件從「經驗傳承」變成可 diff、可 rollback 的工程物件。</li>
+    <li><strong>文件 pipeline 設計：</strong>規劃會議逐字稿 → GitLab CI → LLM → SA/SD 文件（Wiki + docx）的自動化管線，LLM provider 以 CI 變數抽換、零程式碼切換。</li>
+  </ul>
+</section>
+
+<section id="quality">
+  <h2>品質與測試</h2>
+  <ul class="plain">
+    <li><strong>單元測試制度化：</strong>為金融核階系統制定 Unit Test 檢核 checklist，隨團隊實踐迭代六個版本 —— 測試標準是活的文件，不是一次性交付。</li>
+    <li><strong>測試資料唯一事實來源：</strong>以 Markdown 表格為測試資料 source of truth，工具轉出測試實際讀取的 xlsx —— 資料可 review、可版控。</li>
+    <li><strong>E2E 與無障礙：</strong>Playwright 測試工程（見 pw-agents），含 axe 掃描與人工 a11y review checklist。</li>
+    <li><strong>預設不破壞：</strong>appup 預設唯讀、升級需明確確認；voice-mac-agent 危險操作預設關閉。工具的預設值就是它的品格。</li>
+  </ul>
+</section>
+
+<section id="contact">
+  <h2>聯絡</h2>
+  <p class="contact">
+    <a href="https://github.com/reynoldsliu">GitHub / reynoldsliu</a>
+    <a href="mailto:reynoldsliu01443@gmail.com">reynoldsliu01443@gmail.com</a>
+  </p>
+</section>
+
+<footer>© 2026 Reynolds Liu · 本站以純 HTML/CSS 手寫，托管於 GitHub Pages</footer>
+
+</div>
+</body>
+</html>
