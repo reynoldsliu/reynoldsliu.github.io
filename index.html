@@ -71,14 +71,6 @@
     </div>
 
     <div class="card">
-      <div class="path">npx playwright test</div>
-      <h3><a href="https://github.com/reynoldsliu/pw-agents">pw-agents</a></h3>
-      <p>30 天系統化的 Playwright 實作（locator 策略、網路攔截、auth state、平行化、自訂 matcher），加上一套可重用的無障礙測試標準與 review checklist。</p>
-      <div class="tags"><span class="tag">Playwright</span><span class="tag">TypeScript</span><span class="tag">Accessibility</span></div>
-      <div class="links"><a href="https://github.com/reynoldsliu/pw-agents">github →</a></div>
-    </div>
-
-    <div class="card">
       <div class="path">LLM_PROVIDER=gemini docpipe run meeting.txt</div>
       <h3><a href="https://github.com/reynoldsliu/doc-pipeline">doc-pipeline</a></h3>
       <p>會議逐字稿 → 標準化文件（會議紀要、決策紀錄）的 LLM pipeline。Provider 以環境變數抽換（Claude／Gemini 零程式碼切換）、prompt 模板是資料、內建 fake provider 讓測試與 CI 完全離線。</p>
@@ -106,7 +98,7 @@
   <ul class="plain">
     <li><strong>單元測試制度化：</strong>為金融核階系統制定 Unit Test 檢核 checklist，隨團隊實踐迭代六個版本 —— 測試標準是活的文件，不是一次性交付。</li>
     <li><strong>測試資料唯一事實來源：</strong>以 Markdown 表格為測試資料 source of truth，工具轉出測試實際讀取的 xlsx —— 資料可 review、可版控。</li>
-    <li><strong>E2E 與無障礙：</strong>Playwright 測試工程（見 pw-agents），含 axe 掃描與人工 a11y review checklist。</li>
+    <li><strong>E2E 與無障礙：</strong>自訂一套 <a href="https://github.com/reynoldsliu/pw-agents/tree/main/specs">無障礙測試標準與 review checklist</a>（data-testid 定位策略、ARIA 規範），搭配 Playwright + axe 落地。</li>
     <li><strong>預設不破壞：</strong>appup 預設唯讀、升級需明確確認；voice-mac-agent 危險操作預設關閉。工具的預設值就是它的品格。</li>
   </ul>
 </section>
