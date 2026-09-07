@@ -62,7 +62,10 @@ OPERATOR 任務把運算結果寫進變數池，QUERY 任務把查詢結果供�
 </p>
 
 <h2>表達式引擎：字串規則怎麼變成可執行的判斷</h2>
-<p>存在資料表裡的規則是字串，要安全地變成程式行為，中間是一條編譯管線：</p>
+<p>存在資料表裡的規則是字串，要安全地變成程式行為，中間是一條編譯管線。
+這一段我以 clean-room 方式重寫成可執行的開源函式庫：
+<a href="https://github.com/reynoldsliu/flow-expression-engine">flow-expression-engine</a>（純 Java 17、零依賴、15 tests）——
+本頁講的機制在那裡都跑得起來。</p>
 <pre class="block">
 "AMT * 0.8 &gt; LIMIT"  ─→  <span class="k">Shunting-yard</span> 解析  ─→  RPN（後綴式）
                                                    │
