@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reynolds Liu — CV</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<style>
+:root{--fg:#1c2128;--muted:#57606a;--line:#d8dee4;--accent:#0e7a4e}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--fg);
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+ font-size:14px;line-height:1.55}
+.page{max-width:760px;margin:0 auto;padding:48px 32px}
+h1{font-size:1.6rem;margin:0}
+.head{color:var(--muted);margin:4px 0 0}
+.head a{color:var(--accent);text-decoration:none}
+h2{font-size:.95rem;letter-spacing:2px;text-transform:uppercase;color:var(--accent);
+ border-bottom:1px solid var(--line);padding-bottom:4px;margin:26px 0 10px}
+.role{display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:12px}
+.role b{font-size:1rem}
+.role span{color:var(--muted)}
+ul{margin:6px 0 0;padding-left:20px}
+li{margin-bottom:5px}
+.bar{margin-top:20px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;
+ font-size:.85rem;color:var(--muted)}
+@media print{.bar{display:none}.page{padding:0}body{font-size:12.5px}}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="bar">🖨 Press <b>⌘P / Ctrl+P</b> to save this CV as PDF. ← <a href="index.html">back to portfolio</a></div>
+
+<h1>LIU, LI-CHEN (Reynolds)</h1>
+<p class="head">Taipei, Taiwan · <a href="mailto:reynoldsliu01443@gmail.com">reynoldsliu01443@gmail.com</a> · <a href="https://github.com/reynoldsliu">github.com/reynoldsliu</a> · <a href="https://reynoldsliu.github.io">reynoldsliu.github.io</a></p>
+
+<h2>Summary</h2>
+<p>Software developer with 3 years of enterprise experience designing and delivering mission-critical financial systems for major Taiwanese banks. Proficient in Java, Spring Boot, Angular, and Oracle Database, with a track record of full-stack development, system architecture design, and mentoring junior engineers. Extending into distributed systems and AI engineering through postgraduate study in Australia (Melbourne, 2027).</p>
+
+<h2>Experience</h2>
+<div class="role"><b>System Designer — Hung Yang Software Technology, Taipei</b><span>Nov 2025 – Present</span></div>
+<ul>
+<li>Architected a database-driven rule engine that lets non-technical business staff modify lending rules independently, cutting rule-change turnaround from days to minutes.</li>
+<li>Resolved a critical production data-import failure by re-engineering batch processing with JDBC batch inserts (50 → 1,000 records per transaction), successfully processing 15M+ records.</li>
+<li>Mentored 2 junior developers; established code review standards, documentation practices, and reporting workflows.</li>
+</ul>
+<div class="role"><b>Software Developer (Technical Consultant) — Hung Yang Software Technology, Taipei</b><span>Nov 2023 – Nov 2025</span></div>
+<ul>
+<li>Led development of a corporate banking module replacing a TWD 20M third-party system (financial statement analysis, credit ratings, collateral management, central-bank regulatory compliance).</li>
+<li>Built full-stack features across Java/Spring Boot and Angular against Oracle Database and Redis, deployed with Docker.</li>
+<li>Worked with business analysts and bank stakeholders to turn regulatory requirements into maintainable designs.</li>
+</ul>
+
+<h2>Selected Projects</h2>
+<ul>
+<li><b>doc-pipeline</b> — provider-swappable LLM pipeline turning transcripts into standardized documents (Claude/Gemini via one env var; offline fake provider for CI). <a href="https://github.com/reynoldsliu/doc-pipeline">github</a></li>
+<li><b>voice-mac-agent</b> — voice-controlled Mac assistant via Telegram; local-first (Whisper + ollama), LLM restricted to a tool allowlist — the security boundary lives in code, not the model. <a href="https://github.com/reynoldsliu/voice-mac-agent">github</a></li>
+<li><b>appup</b> — zero-dependency Python CLI that inventories every app on a Mac across package managers and flags outdated/EOL software. <a href="https://github.com/reynoldsliu/appup">github</a></li>
+</ul>
+
+<h2>Education</h2>
+<div class="role"><b>B.Eng. in Communication Engineering — Jinan University, Guangzhou</b><span>Jun 2022</span></div>
+
+<h2>Skills</h2>
+<ul>
+<li><b>Engineering:</b> Java 8/17 · Spring Boot · Angular 8/17 · Oracle DB · Redis · Docker · Playwright</li>
+<li><b>AI engineering:</b> Claude API · LLM pipeline &amp; tool-safety design · spec-driven AI workflows</li>
+<li><b>Tools:</b> IntelliJ IDEA · Git · Azure DevOps · DataGrip</li>
+<li><b>Languages:</b> Mandarin (native) · English (fluent) · Japanese (JLPT N3)</li>
+</ul>
+</div>
+</body>
+</html>
