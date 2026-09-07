@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LLM 應用工程的演化規律 | Reynolds Liu</title>
+<meta name="description" content="從 prompt → context → harness → loop：每個新概念都在解決上一層規模化後的瓶頸。用這條規律推演下一代概念，並導出工程師的站位策略。">
+<meta property="og:title" content="LLM 應用工程的演化規律：從 prompt 到 loop，以及下一步">
+<meta property="og:description" content="用演化規律推演 verification / orchestration engineering，並導出工程師的站位策略。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+</nav>
+
+<article>
+<h1>LLM 應用工程的演化規律：從 prompt 到 loop，以及下一步</h1>
+<p class="sub">2026-07 · Reynolds Liu</p>
+
+<h2>每個新概念都在解決上一層規模化後的瓶頸</h2>
+<table>
+  <tr><th>概念</th><th>解決的瓶頸</th><th>抽象層級</th></tr>
+  <tr><td>Prompt engineering</td><td>單次指令怎麼寫</td><td>token</td></tr>
+  <tr><td>Context engineering</td><td>視窗裡放什麼、怎麼取捨</td><td>視窗</td></tr>
+  <tr><td>Harness engineering</td><td>模型能碰到什麼（工具／環境／權限）</td><td>環境</td></tr>
+  <tr><td>Loop engineering</td><td>時間軸上怎麼迭代、自我修正、何時停</td><td>時間</td></tr>
+</table>
+<p>
+新概念誕生的通則：當某個子步驟的失敗模式、技能組合、工具鏈都與母學問不同時，它就會被獨立命名 ——
+如同 context engineering 曾經只是 prompt engineering 裡的一個步驟。
+</p>
+
+<h2>順推：下一個被命名的學問</h2>
+<ul class="plain">
+  <li><strong>Verification engineering（驗證工程）—— 最可能先浮現。</strong>觸發訊號：驗證難度超過生產難度（agent 產能遠大於人類審核能力）。
+  核心問題：如何設計「驗證成本遠低於生產成本」的任務結構、防 reward hacking 的 rubric、裁判模型、抽樣審計的統計學。</li>
+  <li><strong>Orchestration / Fleet engineering（編隊工程）。</strong>multi-agent 是技術架構，fleet 是工程學問 —— 類比「多執行緒」與「並行程式設計」的關係。
+  任務切分、agent 間 context 傳遞協定、衝突仲裁、失敗偵測與替換、成本分配 —— <strong>底層全是分散式系統的老問題</strong>。</li>
+</ul>
+
+<h2>斷推：打斷階梯的劇本</h2>
+<ul class="plain">
+  <li><strong>Economy engineering：</strong>中央指揮改為市場機制（競標、賞金、賠償），管理問題變成 mechanism design。</li>
+  <li><strong>Ecology engineering：</strong>不設計行為、設計淘汰規則 —— 工程師從設計者變成育種者。</li>
+  <li><strong>De-engineering：</strong>押注所有 engineering 都是模型不夠強時期的鷹架（如 feature engineering 被 deep learning 蒸發），
+  最終只剩 intent specification：把「你要什麼」講清楚。規格書與需求分析這些最古老的技能，繞一圈變成最後的護城河。</li>
+</ul>
+
+<h2>管理工作正在變成工程物件</h2>
+<ul class="plain">
+  <li>派工判斷 → orchestrator routing 邏輯（可 code、可 A/B test）</li>
+  <li>Code review 品味 → rubric 檔案（可版控、可迭代）</li>
+  <li>Onboarding 文件 → 可載入的 agent skills（可 diff、可 rollback、可複製一萬份）</li>
+  <li>換人決策 → eval 分數觸發的 agent 替換策略</li>
+</ul>
+<p>差異在於：人類管理靠經驗傳承；工程物件可以 diff、rollback、測試、無限複製。</p>
+
+<h2>工程師的站位：押注不變量，不押工具</h2>
+<table>
+  <tr><th>不變量（隨時間增值）</th><th>工具（半衰期以月計）</th></tr>
+  <tr><td>分散式系統、OS/DB 內部原理</td><td>特定 agent 框架的操作技巧</td></tr>
+  <tr><td>讀懂並判斷 code 好壞的能力</td><td>框架細節</td></tr>
+  <tr><td>模糊需求 → 精確規格的表達力</td><td></td></tr>
+  <tr><td>統計直覺（eval/verification 的地基）</td><td></td></tr>
+</table>
+<p>
+站位選擇：站在 agent 的<strong>上游</strong>（造 orchestration、sandbox、記憶系統等基礎設施）或<strong>側面</strong>（驗證 agent 產出的
+eval 與可靠性工程），不站下游（明確規格的 ticket、CRUD、改 bug —— 那是 agent 最先吃掉的層）。
+跳出方式：從「完成任務」改成「擁有問題」—— 一個系統從需求到上線到出事，整段能扛。
+</p>
+
+<h2>一句話總結</h2>
+<p>
+不需要預測哪個概念會贏，只需要站在所有劇本的交集：
+<strong>深的系統底子 × 快的判斷力 × 把「要什麼」講清楚的表達力。</strong>
+</p>
+
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>
