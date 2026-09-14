@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本週導讀:分散式系統中的兩種「線上決策」——共識調速與邊緣部署 | Reynolds Liu</title>
+<meta name="description" content="2026-09-14 論文導讀：本週導讀:分散式系統中的兩種「線上決策」——共識調速與邊緣部署">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+</nav>
+<article>
+<h1>本週導讀:分散式系統中的兩種「線上決策」——共識調速與邊緣部署</h1>
+<p class="sub">2026-09-14 · 每週論文導讀（自動發佈）</p>
+<p>這週兩篇近期論文都在講同一件事的不同版本:系統必須在資訊不完整的情況下,即時做出會影響效能與成本的決策。一篇是 DAG 共識協定要不要多開幾個 leader,另一篇是邊緣運算節點要不要現在部署一個服務實例。背後串起兩者、也串起本週經典的,是「在不確定性下如何設計一個可證明有底線的線上演算法」這個更古老的問題。</p>
+<h2>1. Barnacle:讓 DAG 共識協定自己決定要開幾個 leader</h2>
+<p><strong>Zeno De Angeli, Alexandru Ianov Vitanov, Philipp Jovanovic, Lefteris Kokoris-Kogias, Alberto Sonnino, Pasindu Tennage, Igor Zablotchi</strong> · arXiv:2609.03978,2026年9月 · <a href="https://arxiv.org/abs/2609.03978">連結</a></p>
+<p>在新一代的 DAG-based BFT 共識協定(例如 Sui 使用的 Mysticeti 一類設計)裡,所有驗證者(validator)每一輪都同時提出區塊,但只有被指定為「leader」的區塊能觸發交易確認(commit)。理論上,一輪裡開多個 leader slot 可以降低排隊延遲,因為更多提案可以被快速確認。但實務上幾乎所有正式上線的系統都只開一個 leader,原因是 head-of-line blocking:只要有一個 leader 節點變慢,整條 pipeline 就會被卡住至少一個 leader timeout,嚴重時甚至要等好幾個 wave,因為它的 slot 必須落到較慢的「間接確認規則」(indirect decision rule)才能定案。leader 數愈多,踩到慢節點的機率就愈高,這個風險是會隨 leader 數放大的。</p>
+<p>Barnacle 的做法不是重新設計共識協定,而是做一個可以外掛在任何 DAG 協定上的調速層。它在每個固定時間間隔,量測「在已經確定下來的 DAG 上,有多少比例的 leader slot 是被直接確認規則(direct commit rule)定案的」——這個量測完全基於本地已知的 DAG 結構,不需要多發任何訊息、也不需要額外的密碼學運算,是確定性的。根據這個比例,Barnacle 用 AIMD(additive increase, multiplicative decrease,加性增加、乘性減少)去調整下一輪的 leader 數量:直接確認比例高,代表系統健康,可以逐步增加 leader 數;一旦比例下降,代表有節點變慢,就大幅砍回較保守的 leader 數。這正是 TCP 壅塞控制拿來管理頻寬的同一套邏輯,只是這裡管的是「leader 併發度」而不是「傳送速率」。論文證明了這個機制在四種涵蓋拜占庭容錯(3f+1、5f+1)、crash-only(2c+1)以及混合容錯模型(5f+3c+1)的協定上都能維持安全性(safety)與活性(liveness)。</p>
+<p>實驗結果顯示,在健康網路下 Barnacle 的延遲比固定單一 leader 低 6% 到 13%;在網路劣化的情況下,它能收斂回接近單一 leader 的表現,同時比固定的高 leader 數設定低 35% 到 56%——也就是說它在兩種極端之間都不需要人工調參就能落在接近最優的位置。作者也提到正在與 Sui 團隊合作,評估把 Barnacle 整合進生產環境。</p>
+<p>論文摘要對評估環境的網路規模、真實或合成工作負載的細節著墨不多(本篇是根據 arXiv 摘要與公開資訊撰寫,完整 PDF 的實驗章節未能在本次撰寫時完整解析),這是讀原文時值得多留意的地方,尤其是「direct commit 比例」這個訊號在對抗性攻擊(而非單純變慢)下是否還能可靠反映系統狀態,摘要中並未直接處理這個問題。對碩士生來說,這篇的價值在於示範了一個很實用的系統設計套路:與其重新設計核心協定去解決一個效能問題,不如找一個「協定無關」的訊號,外掛一個回饋控制迴路——這和作業系統排程、資料庫的自適應併發控制是同一種思路的不同應用場域。</p>
+<h2>2. CAPSUM:用「競爭分析」保證邊緣部署決策不會太糟</h2>
+<p><strong>Hailiang Zhao, Ziqi Wang, Yifei Zhang, Mingyi Liu, Xinkui Zhao, Kingsum Chow, Shuiguang Deng</strong> · arXiv:2609.00877,2026年9月 · <a href="https://arxiv.org/abs/2609.00877">連結</a></p>
+<p>邊緣運算平台會把可執行的服務實例佈署在離使用者近的節點上以降低延遲,但每次部署都有一次性成本,而且每個實例只在存活時間(time-to-live, TTL)內有效。這造成一個典型的線上決策困境:如果對未來需求太樂觀,提早部署,一旦預測錯誤就白白浪費部署成本;如果太保守、等確定有需求才部署,又會錯過短暫的流量高峰。更麻煩的是,節點容量有限,這個決策還跟「還有沒有空間可以部署」耦合在一起。</p>
+<p>CAPSUM 的核心想法,是把每一個「node-service」的部署時間序列,精確地化約成一個變動票價的 Bahncard 問題——這是線上演算法理論裡一個經典的模型:你要決定什麼時候買一張打折卡(付一次性成本換取之後的優惠),還是持續付原價,而你不知道自己未來會用多久。透過這個化約,CAPSUM 的彈性版本 CAPSUM-E 可以直接繼承既有 Bahncard 型演算法(論文稱為 PFSUM)已經證明過的競爭比(competitive ratio)保證:一致性(consistency,預測準確時的表現)為 2/(1+β),穩健性(robustness,預測不準時的表現下限)為 1/β,β 是使用者可調的信任預測程度參數。對於容量有限的節點,CAPSUM 再疊加「隨規模調整的損益平衡測試」、「隨使用率變動的影子價格」和「基於證據密度的淘汰機制」,並證明了容量可行性、規模不變性,以及在彈性設定下與 CAPSUM-E 完全等價。</p>
+<p>評估的部分,作者實作了精確的本地離線動態規劃當作上界參照,並與 EDP-A、OREO、uEDC-L 三個既有方法的「同模型改寫版本」比較。在三種合成需求模式下,CAPSUM 比最好的對照方法降低了 33.7% 到 42.9% 的標準化成本;在從 Globus Compute 真實 trace 取樣的資料上降低了 45.5%;並且做了到 1,024 個節點、10,000 個服務的規模測試。這篇論文的評估設計本身就是它的一個賣點:控制型的預測誤差實驗、合成資料與真實 trace 並用、外加大規模測試,是線上演算法論文少見的完整組合。</p>
+<p>論文的限制主要在於理論保證(競爭比)依賴於問題確實能被化約成 Bahncard 模型的假設,以及對照方法是作者根據原論文重新推導的「同模型改寫版本」而非原始程式碼,這種改寫是否忠實反映原方法的最佳表現,是讀者可以質疑的地方。對碩士生而言,這篇的價值不只是邊緣運算,而是提供一個活生生的例子,說明「線上演算法理論」(competitive analysis)如何被用來給一個工程系統設計出「最壞情況下也不會太差」的保證——這是純粹靠機器學習預測或啟發式規則很難做到的。</p>
+<h2>經典——拜占庭將軍問題</h2>
+<p><strong>Leslie Lamport, Robert Shostak, Marshall Pease</strong> · ACM Transactions on Programming Languages and Systems, Vol. 4, No. 3, 1982 · <a href="https://lamport.azurewebsites.net/pubs/byz.pdf">連結</a></p>
+<p>這篇論文把「分散式系統中有節點會說謊或行為異常時,其他節點還能不能達成一致」這個問題,用一個好記的比喻固定了下來:一群將軍圍城,必須靠傳令兵溝通決定「進攻」或「撤退」,但將軍中可能混有叛徒,傳令兵傳的訊息也可能被竄改或遺失。論文證明了一個後來成為整個拜占庭容錯領域基石的結果:在同步網路、口頭訊息(訊息可以被偽造轉述)的模型下,若叛徒數為 m,系統至少需要 3m+1 個節點才能保證忠誠節點達成一致——也就是叛徒比例必須嚴格小於三分之一。如果訊息可以被數位簽章(書面訊息模型),這個門檻可以降到只要總節點數大於叛徒數即可。</p>
+<p>這正是 Barnacle 論文裡出現的 3f+1、5f+1 這些容錯門檻的直接來源——四十多年後,工程師在設計生產級的區塊鏈共識協定時,仍然是在這篇論文劃定的邊界裡工作。論文本身不長,證明過程也相對直接(用歸納法處理不同叛徒數量的情境),但它第一次把「多少壞節點系統仍撐得住」這件事變成一個可以精確計算、而不是憑經驗猜測的問題。</p>
+<p>被取代或補充的部分,主要是效率與適用範圍:1982 年的演算法在訊息複雜度上是指數級的,後續三十年的研究(PBFT 及其之後一整條線的工程化 BFT 協定,包括 Barnacle 所依附的 DAG-based 共識家族)幾乎都是在同一個安全性框架下,想辦法把訊息量、延遲、以及對非同步網路的容忍度做得更實用。換句話說,這篇論文回答的是「理論上能不能做到」,而過去二十年分散式系統研究的大半精力,是在回答「怎麼做到還能快」——這也正是本週兩篇近期論文各自處理的問題:Barnacle 處理共識要多快,CAPSUM 處理邊緣部署決策要多穩。</p>
+<h2>如果只做一件事</h2>
+<p>把 Barnacle 論文摘要裡列出的四種容錯門檻(3f+1、5f+1、2c+1、5f+3c+1)對照拜占庭將軍問題的證明推導一遍,親手算出「叛徒數 m 對應到最少節點數」的關係——這比記住結論更能建立對 BFT 系統設計的直覺,也是理解本週三篇文章共同語彙的最短路徑。</p>
+<p>*本次為排程自動執行:Barnacle 與 CAPSUM 兩篇論文的完整 PDF 因工具限制未能完整解析內文,本篇內容基於 arXiv 摘要頁(已直接驗證標題、作者、摘要全文)撰寫;拜占庭將軍問題的內容描述基於公開、廣為引用的標準敘述與已驗證的出版資訊。*</p>
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>
