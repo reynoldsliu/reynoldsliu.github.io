@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reynolds Liu — Backend Engineer · AI + Architecture</title>
+<meta name="description" content="Backend engineer in banking core systems. Projects: a configurable task flow engine, a local-first AI voice agent, a provider-swappable document pipeline, and a zero-dependency macOS CLI.">
+<meta property="og:title" content="Reynolds Liu — Backend Engineer · AI + Architecture">
+<meta property="og:description" content="Backend engineer in banking core systems, moving toward AI + Architecture.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://reynoldsliu.github.io/en/">
+<link rel="alternate" hreflang="zh-Hant" href="https://reynoldsliu.github.io/">
+<link rel="alternate" hreflang="en" href="https://reynoldsliu.github.io/en/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="top">
+  <a class="home" href="index.html">reynoldsliu</a>
+  <a href="#experience">experience</a>
+  <a href="#projects">projects</a>
+  <a href="#writing">writing</a>
+  <a href="#contact">contact</a>
+  <span class="lang"><a href="../index.html">中文</a><em>/</em><a href="index.html" aria-current="true">EN</a></span>
+</nav>
+
+<div class="term">
+  <div class="term-bar"><i></i><i></i><i></i></div>
+  <div class="term-body">
+    <div><span class="ps">reynolds@dev:~$</span> <span class="cmd">whoami</span></div>
+    <div><h1>Reynolds Liu</h1><span class="caret"></span></div>
+    <div class="out">Backend engineer, banking core systems · Java / Spring · TypeScript</div>
+    <div class="out">→ Heading toward AI + Architecture</div>
+  </div>
+</div>
+<p class="intro">
+  I build rule engines and credit-authorization systems for bank lending platforms — turning
+  "business logic does not belong in the codebase" into an architecture that is configurable and
+  auditable. Outside work, side projects are where I test <strong>safety-boundary design</strong>
+  for LLM applications. Work speaks more honestly than a résumé: what runs, you can run yourself;
+  what cannot be published, I explain as architecture and trade-offs.
+</p>
+
+<section id="experience">
+  <p class="sec">01 · experience</p>
+  <h2>Experience</h2>
+  <ul class="plain">
+    <li><strong>System Designer — Hung Yang Software Technology, Taipei｜Nov 2025 – Present</strong><br>
+    Architected the rule engine for a bank lending platform, letting business staff adjust lending
+    rules themselves and cutting rule-change turnaround from days to minutes. Re-engineered batch
+    import with JDBC batch inserts (50 → 1,000 records per transaction), processing 15M+ records.
+    Mentor 2 junior developers; established the team's code review and documentation standards.</li>
+    <li><strong>Software Developer (Technical Consultant) — Hung Yang Software Technology, Taipei｜Nov 2023 – Nov 2025</strong><br>
+    Contributed to a corporate banking module intended to replace a TWD 20M third-party system
+    (financial statement analysis, credit ratings, collateral management, central-bank compliance),
+    with modules still being delivered one by one.
+    Full-stack Java/Spring Boot and Angular over Oracle and Redis, deployed with Docker.</li>
+    <li><strong>Education</strong> — B.Eng. in Communication Engineering, Jinan University (Guangzhou), Jun 2022</li>
+  </ul>
+  <p class="contact"><a href="cv.html">Full CV (printable) →</a></p>
+</section>
+
+<section id="projects">
+  <p class="sec">02 · projects</p>
+  <h2>Selected work</h2>
+  <p class="section-note">Chosen for architectural depth and completeness; everything else is on <a href="https://github.com/reynoldsliu">GitHub</a>.</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="path">cat projects/task-flow-engine.md</div>
+      <h3><a href="projects/taskengine.html">Task Flow Engine</a></h3>
+      <p>Moves volatile business rules out of code and into the database: the engine runs Tasks and Blocks from configuration, with branching, nested loops, and a full audit trail. A team project — I owned the execution-path log analyser, core flow-editor fixes, and release management.</p>
+      <div class="tags"><span class="tag">Java / Spring</span><span class="tag">Vue 3 + GoJS</span><span class="tag">architecture</span><span class="tag chip-live">deep dive</span></div>
+      <div class="links">
+        <a href="projects/taskengine.html">architecture write-up →</a>
+        <a href="https://github.com/reynoldsliu/flow-expression-engine">expression engine (runnable) →</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="path">./voice_bot.py --local-first</div>
+      <h3><a href="https://github.com/reynoldsliu/voice-mac-agent">voice-mac-agent</a></h3>
+      <p>Control your own Mac by voice or text over Telegram. Local-first (faster-whisper + ollama); the cloud is an explicit choice, never a default. The core design: the security boundary lives in Python, not in the model — the LLM may only pick a tool from an allowlist, and never executes raw text.</p>
+      <div class="tags"><span class="tag">Python</span><span class="tag">LLM tool safety</span><span class="tag">Whisper / ollama</span></div>
+      <div class="links"><a href="https://github.com/reynoldsliu/voice-mac-agent">github →</a></div>
+    </div>
+
+    <div class="card">
+      <div class="path">LLM_PROVIDER=gemini docpipe run meeting.txt</div>
+      <h3><a href="https://github.com/reynoldsliu/doc-pipeline">doc-pipeline</a></h3>
+      <p>An LLM pipeline turning meeting transcripts into standardized documents. Providers swap through one environment variable (Claude/Gemini, zero code change), prompts are data rather than code, and a built-in fake provider keeps tests and CI fully offline — with an eval set that measures output quality.</p>
+      <div class="tags"><span class="tag">Python</span><span class="tag">Claude API</span><span class="tag">pipeline design</span><span class="tag">CI/CD</span></div>
+      <div class="links"><a href="https://github.com/reynoldsliu/doc-pipeline">github →</a></div>
+    </div>
+
+    <div class="card">
+      <div class="path">appup outdated --all</div>
+      <h3><a href="https://github.com/reynoldsliu/appup">appup</a></h3>
+      <p>macOS scatters software across Homebrew, the App Store, npm, pipx and hand-installed apps that know nothing about each other. appup asks all of them, merges the answers, and flags what is outdated or end-of-life. One Python file, zero dependencies, read-only by default, with a built-in selftest.</p>
+      <div class="tags"><span class="tag">Python (zero deps)</span><span class="tag">CLI design</span><span class="tag">macOS</span></div>
+      <div class="links"><a href="https://github.com/reynoldsliu/appup">github →</a></div>
+    </div>
+
+  </div>
+</section>
+
+<section id="workflow">
+  <p class="sec">03 · ai-workflow</p>
+  <h2>How I work with AI</h2>
+  <p class="section-note">AI is not autocomplete — it is a workflow you can engineer. This is what I actually do.</p>
+  <ul class="plain">
+    <li><strong>Spec-driven:</strong> every project keeps a SPEC.md / ROADMAP.md as its single source of truth. AI implements against the spec; a human signs off. Writing down what you want costs less than correcting the output ten times.</li>
+    <li><strong>Safety-boundary design:</strong> the LLM may only pick a tool from an allowlist and fill its arguments — it never executes raw text. The escape hatch is off by default, and still blocklisted once enabled. The boundary lives in code, not in a prompt.</li>
+    <li><strong>Verifiable output:</strong> doc-pipeline ships an eval set — structural completeness checked deterministically in code, semantic quality scored by an LLM judge against a rubric. Automation only holds when verification costs less than production.</li>
+    <li><strong>Knowledge as engineering artefacts:</strong> team documentation standards, design-doc templates, and test-data conversion become version-controlled skills — onboarding stops being oral tradition and becomes something you can diff and roll back.</li>
+  </ul>
+</section>
+
+<section id="quality">
+  <p class="sec">04 · quality</p>
+  <h2>Quality &amp; testing</h2>
+  <ul class="plain">
+    <li><strong>Testing as an institution:</strong> authored the unit-test review checklist for a bank's credit-authorization system, iterated across six versions as the team's practice matured — a testing standard is a living document, not a one-off deliverable.</li>
+    <li><strong>One source of truth for test data:</strong> Markdown tables are the source of truth; a tool generates the xlsx the tests actually read — so test data can be reviewed and version-controlled.</li>
+    <li><strong>E2E and accessibility:</strong> wrote a reusable <a href="https://github.com/reynoldsliu/pw-agents/tree/main/specs">accessibility testing standard and review checklist</a> (data-testid locator strategy, ARIA rules), applied with Playwright and axe.</li>
+    <li><strong>Safe by default:</strong> appup is read-only unless you explicitly confirm an upgrade; voice-mac-agent keeps dangerous operations off by default. A tool's defaults are its character.</li>
+  </ul>
+</section>
+
+<section id="writing">
+  <p class="sec">05 · writing</p>
+  <h2>Writing</h2>
+  <a class="post" href="writing/llm-engineering.html">
+    <b>How LLM application engineering evolves: from prompt to loop, and what comes next</b>
+    <span>Each new concept solves the bottleneck the previous layer hit at scale — using that pattern to predict verification and orchestration engineering, and what it means for where an engineer should stand.</span>
+  </a>
+  <p class="section-note">I also publish a weekly paper-reading brief, <a href="../index.html#writing">written in Chinese</a>.</p>
+</section>
+
+<section id="contact">
+  <p class="sec">06 · contact</p>
+  <h2>Contact</h2>
+  <p class="contact">
+    <a href="https://github.com/reynoldsliu">github.com/reynoldsliu</a>
+    <a href="mailto:reynoldsliu01443@gmail.com">reynoldsliu01443@gmail.com</a>
+  </p>
+</section>
+
+<footer>© 2026 Reynolds Liu · hand-written HTML/CSS · GitHub Pages</footer>
+
+</div>
+</body>
+</html>

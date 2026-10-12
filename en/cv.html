@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reynolds Liu — CV</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<style>
+:root{--fg:#1c2128;--muted:#57606a;--line:#d8dee4;--accent:#0e7a4e}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--fg);
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+ font-size:14px;line-height:1.55}
+.page{max-width:760px;margin:0 auto;padding:44px 32px}
+h1{font-size:1.6rem;margin:0}
+.head{color:var(--muted);margin:4px 0 0}
+.head a{color:var(--accent);text-decoration:none}
+h2{font-size:.95rem;letter-spacing:2px;text-transform:uppercase;color:var(--accent);
+ border-bottom:1px solid var(--line);padding-bottom:4px;margin:24px 0 10px}
+.role{display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:12px}
+.role b{font-size:1rem}
+.role span{color:var(--muted)}
+ul{margin:6px 0 0;padding-left:20px}
+li{margin-bottom:5px}
+.bar{margin-bottom:22px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;
+ font-size:.85rem;color:var(--muted)}
+.bar a{color:var(--accent);text-decoration:none}
+@media print{.bar{display:none}.page{padding:0}body{font-size:12.3px}h2{margin:18px 0 8px}}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="bar">🖨 Press <b>⌘P / Ctrl+P</b> to save as PDF ·
+ <a href="index.html">back to portfolio</a> ·
+ <a href="../cv.html">Chinese version</a></div>
+
+<h1>LIU, LI-CHEN (Reynolds)</h1>
+<p class="head">Taipei, Taiwan · <a href="mailto:reynoldsliu01443@gmail.com">reynoldsliu01443@gmail.com</a> · <a href="https://github.com/reynoldsliu">github.com/reynoldsliu</a> · <a href="https://reynoldsliu.github.io/en/">reynoldsliu.github.io</a></p>
+
+<h2>Summary</h2>
+<p>Backend engineer with 3 years of enterprise experience building mission-critical financial systems for Taiwanese banks. I design configuration-driven architectures — keeping volatile business rules out of the codebase — and build the tooling that keeps them operable. Java, Spring Boot, Angular and Oracle in production; LLM application design and safety boundaries in my own projects.</p>
+<!-- Moving into distributed systems and AI engineering through postgraduate study in Australia (Melbourne, 2027). -->
+
+<h2>Experience</h2>
+<div class="role"><b>System Designer — Hung Yang Software Technology, Taipei</b><span>Nov 2025 – Present</span></div>
+<ul>
+<li>Architected a database-driven rule engine for a bank lending platform, letting business staff modify lending rules without a code change — cutting rule-change turnaround from days to minutes.</li>
+<li>Built the execution-path log analyser that makes the architecture operable: reconstructs what actually ran from engine logs into a table of decision points, reducing debugging from half a day to minutes.</li>
+<li>Resolved a critical production data-import failure by re-engineering batch processing with JDBC batch inserts (50 → 1,000 records per transaction), successfully processing 15M+ records.</li>
+<li>Mentor 2 junior developers; established the team's code review standards, documentation practices and reporting workflow.</li>
+</ul>
+<div class="role"><b>Software Developer (Technical Consultant) — Hung Yang Software Technology, Taipei</b><span>Nov 2023 – Nov 2025</span></div>
+<ul>
+<li>Contributed to a corporate banking module intended to replace a TWD 20M third-party system — financial statement analysis, credit ratings, collateral management and central-bank regulatory compliance — with modules still being delivered one by one.</li>
+<li>Built full-stack features across Java/Spring Boot and Angular against Oracle Database and Redis, deployed with Docker.</li>
+<li>Authored the unit-test review checklist for the credit-authorization system and iterated it across six versions as the team's practice matured.</li>
+<li>Worked directly with business analysts and bank stakeholders to turn regulatory requirements into maintainable system designs.</li>
+</ul>
+
+<h2>Selected Projects</h2>
+<ul>
+<li><b>flow-expression-engine</b> — a type-aware expression engine in pure Java 17, zero dependencies: shunting-yard parsing to RPN, then typed evaluation that rejects meaningless operations with errors non-engineers can read. A clean-room reimplementation of the expression layer from the rule engine above. <a href="https://github.com/reynoldsliu/flow-expression-engine">github.com/reynoldsliu/flow-expression-engine</a></li>
+<li><b>doc-pipeline</b> — an LLM pipeline turning meeting transcripts into standardized documents. Providers swap via one environment variable (Claude/Gemini, no code change); prompts are data; a built-in fake provider keeps CI offline; an eval set scores output quality with deterministic structural checks plus an LLM judge. <a href="https://github.com/reynoldsliu/doc-pipeline">github.com/reynoldsliu/doc-pipeline</a></li>
+<li><b>voice-mac-agent</b> — voice-controlled Mac assistant over Telegram. Local-first (Whisper + ollama); the LLM may only select from a tool allowlist and never executes raw text — the security boundary lives in code, not in the prompt, and is covered by tests. <a href="https://github.com/reynoldsliu/voice-mac-agent">github.com/reynoldsliu/voice-mac-agent</a></li>
+<li><b>appup</b> — zero-dependency Python CLI that inventories every app on a Mac across five package managers and flags outdated or end-of-life software. Read-only by default. <a href="https://github.com/reynoldsliu/appup">github.com/reynoldsliu/appup</a></li>
+</ul>
+
+<h2>Education</h2>
+<div class="role"><b>B.Eng. in Communication Engineering — Jinan University, Guangzhou</b><span>Jun 2022</span></div>
+<!--<div class="role"><b>Master's in Information Technology — Melbourne, Australia</b><span>from 2027</span></div>-->
+
+<h2>Skills</h2>
+<ul>
+<li><b>Backend:</b> Java 8/17 · Spring Boot · Oracle DB · Redis · Docker · JPA/MyBatis</li>
+<li><b>Frontend:</b> Angular 8/17 · Vue 3 · TypeScript</li>
+<li><b>AI engineering:</b> Claude API · LLM pipeline and tool-safety design · eval design · spec-driven AI workflows</li>
+<li><b>Testing:</b> JUnit · Playwright E2E · accessibility testing standards</li>
+<li><b>Tools:</b> Git · IntelliJ IDEA · Azure DevOps · DataGrip</li>
+<li><b>Languages:</b> Mandarin (native) · English (fluent) · Japanese (JLPT N3)</li>
+</ul>
+</div>
+</body>
+</html>

@@ -7,6 +7,8 @@
 <meta name="description" content="把業務規則從程式碼移到資料庫：Task/Block 執行模型、Shunting-yard + SpEL 表達式引擎、動態查詢與 LOG 執行路徑分析的架構解析。">
 <meta property="og:title" content="Task Flow Engine — 可設定的任務流程引擎">
 <meta property="og:description" content="規則資料化架構的深度解析：執行模型、表達式引擎、動態查詢、LOG 路徑分析。">
+<link rel="alternate" hreflang="zh-Hant" href="https://reynoldsliu.github.io/projects/taskengine.html">
+<link rel="alternate" hreflang="en" href="https://reynoldsliu.github.io/en/projects/taskengine.html">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +23,7 @@
   <a href="../index.html#projects">projects</a>
   <a href="../index.html#writing">writing</a>
   <a href="../index.html#contact">contact</a>
+  <span class="lang"><a href="taskengine.html" aria-current="true">中文</a><em>/</em><a href="../en/projects/taskengine.html">EN</a></span>
 </nav>
 
 <article>
@@ -30,6 +33,8 @@
 <div class="note">
 這是任職期間的<strong>團隊專案</strong>（3 人），原始碼屬公司所有、不公開。
 本頁呈現架構設計與我實際負責的部分；文中不含任何真實業務規則與客戶資訊。
+表達式引擎那一段我以 clean-room 方式重寫成可執行的開源版本：
+<a href="https://github.com/reynoldsliu/flow-expression-engine">flow-expression-engine</a>。
 </div>
 
 <h2>問題</h2>
@@ -62,14 +67,16 @@ OPERATOR 任務把運算結果寫進變數池，QUERY 任務把查詢結果供�
 </p>
 
 <h2>表達式引擎：字串規則怎麼變成可執行的判斷</h2>
-<p>存在資料表裡的規則是字串，要安全地變成程式行為，中間是一條編譯管線。
+<p>
+存在資料表裡的規則是字串，要安全地變成程式行為，中間是一條編譯管線。
 這一段我以 clean-room 方式重寫成可執行的開源函式庫：
 <a href="https://github.com/reynoldsliu/flow-expression-engine">flow-expression-engine</a>（純 Java 17、零依賴、15 tests）——
-本頁講的機制在那裡都跑得起來。</p>
+本頁講的機制在那裡都跑得起來。
+</p>
 <pre class="block">
-"AMT * 0.8 &gt; LIMIT"  ─→  <span class="k">Shunting-yard</span> 解析  ─→  RPN（後綴式）
-                                                   │
-             變數池取值 ←──  <span class="k">Predicate / SpEL</span> 求值  ←┘
+"AMT * 0.8 &gt; LIMIT"  ─→  <span class="k">Shunting-yard</span>  ─→  RPN
+                                            │
+                  變數池取值 ←──  <span class="k">Predicate / SpEL</span>  ←┘
 </pre>
 <ul class="plain">
   <li><strong>型別感知的運算：</strong>不只四則運算 —— 日期 ± 天數、LocalDateTime 加減時、日期差值、整數與月份相乘等混合型別運算都有定義。</li>
@@ -102,7 +109,7 @@ OPERATOR 任務把運算結果寫進變數池，QUERY 任務把查詢結果供�
 <ul class="plain">
   <li><strong>LOG 執行路徑分析模組（Flow Studio）：</strong>「設定即程式」的代價是除錯困難 —— 出問題時沒有 stack trace 可看，只有一長串執行 log。
   我做的模組讓使用者上傳引擎 log，重建整條實際執行路徑，把「哪個 Task、依什麼條件、把流程導去哪裡」整理成關鍵決策點表格；
-  支援依業務模組快速預設分析欄位（選定模組自動隱藏手動設定），結果碼彙整以顯示註記為判準避免誤報。
+  支援依業務模組快速預設分析欄位，結果碼彙整以顯示註記為判準避免誤報。
   這個模組把除錯時間從「人工對 log 半天」壓到分鐘級 —— 規則資料化的架構能不能維運，就靠這一塊。</li>
   <li><strong>流程編輯核心修正：</strong>迴圈區塊內任務的接續候選必須限縮在當前 ForBlock 範圍（否則畫得出執行不了的流程）、
   空區塊視為自然結束以修復迴圈端點斷線、匯出 JSON 顯式輸出序號並校驗陣列順序一致性 —— 編輯器畫出來的圖與引擎實際執行必須嚴格等價。</li>

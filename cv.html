@@ -1,73 +1,86 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Reynolds Liu — CV</title>
+<title>劉力辰 Reynolds Liu — 履歷</title>
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{--fg:#1c2128;--muted:#57606a;--line:#d8dee4;--accent:#0e7a4e}
 *{box-sizing:border-box}
 body{margin:0;background:#fff;color:var(--fg);
- font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
- font-size:14px;line-height:1.55}
-.page{max-width:760px;margin:0 auto;padding:48px 32px}
-h1{font-size:1.6rem;margin:0}
-.head{color:var(--muted);margin:4px 0 0}
+ font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif;
+ font-size:14px;line-height:1.7}
+.page{max-width:760px;margin:0 auto;padding:44px 32px}
+h1{font-size:1.6rem;margin:0;letter-spacing:1px}
+.head{color:var(--muted);margin:4px 0 0;font-size:.92rem}
 .head a{color:var(--accent);text-decoration:none}
-h2{font-size:.95rem;letter-spacing:2px;text-transform:uppercase;color:var(--accent);
- border-bottom:1px solid var(--line);padding-bottom:4px;margin:26px 0 10px}
+h2{font-size:.95rem;letter-spacing:3px;color:var(--accent);
+ border-bottom:1px solid var(--line);padding-bottom:4px;margin:24px 0 10px}
 .role{display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:12px}
 .role b{font-size:1rem}
 .role span{color:var(--muted)}
 ul{margin:6px 0 0;padding-left:20px}
 li{margin-bottom:5px}
-.bar{margin-top:20px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;
+.bar{margin-bottom:22px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;
  font-size:.85rem;color:var(--muted)}
-@media print{.bar{display:none}.page{padding:0}body{font-size:12.5px}}
+.bar a{color:var(--accent);text-decoration:none}
+@media print{.bar{display:none}.page{padding:0}body{font-size:12.3px;line-height:1.6}h2{margin:18px 0 8px}}
 </style>
 </head>
 <body>
 <div class="page">
-<div class="bar">🖨 Press <b>⌘P / Ctrl+P</b> to save this CV as PDF. ← <a href="index.html">back to portfolio</a></div>
+<div class="bar">🖨 按 <b>⌘P / Ctrl+P</b> 可存成 PDF ·
+ <a href="index.html">回作品集</a> ·
+ <a href="en/cv.html">English</a></div>
 
-<h1>LIU, LI-CHEN (Reynolds)</h1>
-<p class="head">Taipei, Taiwan · <a href="mailto:reynoldsliu01443@gmail.com">reynoldsliu01443@gmail.com</a> · <a href="https://github.com/reynoldsliu">github.com/reynoldsliu</a> · <a href="https://reynoldsliu.github.io">reynoldsliu.github.io</a></p>
+<h1>劉力辰 Reynolds Liu</h1>
+<p class="head">台北 · <a href="mailto:reynoldsliu01443@gmail.com">reynoldsliu01443@gmail.com</a> · <a href="https://github.com/reynoldsliu">github.com/reynoldsliu</a> · <a href="https://reynoldsliu.github.io">reynoldsliu.github.io</a></p>
 
-<h2>Summary</h2>
-<p>Software developer with 3 years of enterprise experience designing and delivering mission-critical financial systems for major Taiwanese banks. Proficient in Java, Spring Boot, Angular, and Oracle Database, with a track record of full-stack development, system architecture design, and mentoring junior engineers. Extending into distributed systems and AI engineering through postgraduate study in Australia (Melbourne, 2027).</p>
+<h2>簡介</h2>
+<p>後端工程師，3 年金融核心系統開發經驗，服務對象為國內銀行。專長是「把易變的業務規則移出 codebase」的可設定架構設計，以及讓這類架構真正能維運的配套工具。工作上使用 Java、Spring Boot、Angular 與 Oracle；業餘專案聚焦 LLM 應用設計與安全邊界。</p>
+<!--    2027 年將赴墨爾本攻讀資訊碩士，往分散式系統與 AI 工程發展。-->
 
-<h2>Experience</h2>
-<div class="role"><b>System Designer — Hung Yang Software Technology, Taipei</b><span>Nov 2025 – Present</span></div>
+<h2>工作經歷</h2>
+<div class="role"><b>System Designer — 鴻揚科技（台北）</b><span>2025.11 – 現在</span></div>
 <ul>
-<li>Architected a database-driven rule engine that lets non-technical business staff modify lending rules independently, cutting rule-change turnaround from days to minutes.</li>
-<li>Resolved a critical production data-import failure by re-engineering batch processing with JDBC batch inserts (50 → 1,000 records per transaction), successfully processing 15M+ records.</li>
-<li>Mentored 2 junior developers; established code review standards, documentation practices, and reporting workflows.</li>
+<li>設計銀行授信平台的資料驅動規則引擎，讓業務人員不需改程式即可調整授信規則，規則變更從數天縮短到分鐘級。</li>
+<li>開發 LOG 執行路徑分析模組，把引擎執行紀錄還原成關鍵決策點表格 —— 除錯時間從人工對 log 半天壓到分鐘級，是這套架構能維運的關鍵配套。</li>
+<li>解決正式環境資料匯入失敗問題：重做批次處理改用 JDBC batch（單交易 50 → 1,000 筆），順利完成 1,500 萬筆資料匯入。</li>
+<li>帶 2 位 junior 工程師，建立團隊的 code review 標準、技術文件規範與進度回報流程。</li>
 </ul>
-<div class="role"><b>Software Developer (Technical Consultant) — Hung Yang Software Technology, Taipei</b><span>Nov 2023 – Nov 2025</span></div>
+<div class="role"><b>Software Developer（技術顧問）— 鴻揚科技（台北）</b><span>2023.11 – 2025.11</span></div>
 <ul>
-<li>Led development of a corporate banking module replacing a TWD 20M third-party system (financial statement analysis, credit ratings, collateral management, central-bank regulatory compliance).</li>
-<li>Built full-stack features across Java/Spring Boot and Angular against Oracle Database and Redis, deployed with Docker.</li>
-<li>Worked with business analysts and bank stakeholders to turn regulatory requirements into maintainable designs.</li>
-</ul>
-
-<h2>Selected Projects</h2>
-<ul>
-<li><b>doc-pipeline</b> — provider-swappable LLM pipeline turning transcripts into standardized documents (Claude/Gemini via one env var; offline fake provider for CI). <a href="https://github.com/reynoldsliu/doc-pipeline">github</a></li>
-<li><b>voice-mac-agent</b> — voice-controlled Mac assistant via Telegram; local-first (Whisper + ollama), LLM restricted to a tool allowlist — the security boundary lives in code, not the model. <a href="https://github.com/reynoldsliu/voice-mac-agent">github</a></li>
-<li><b>appup</b> — zero-dependency Python CLI that inventories every app on a Mac across package managers and flags outdated/EOL software. <a href="https://github.com/reynoldsliu/appup">github</a></li>
+<li>參與企業金融模組開發，目標取代原本 TWD 2,000 萬的第三方系統，涵蓋財報分析、信用評等、擔保品管理與央行法遵檢核，仍逐個模組開發中。</li>
+<li>Java/Spring Boot 後端與 Angular 前端全端開發，介接 Oracle Database 與 Redis 快取，以 Docker 部署。</li>
+<li>制定核階系統的 Unit Test 檢核 checklist，隨團隊實踐迭代六個版本。</li>
+<li>與業務分析師及銀行端關係人直接協作，將法規需求轉譯為可維護的系統設計。</li>
 </ul>
 
-<h2>Education</h2>
-<div class="role"><b>B.Eng. in Communication Engineering — Jinan University, Guangzhou</b><span>Jun 2022</span></div>
-
-<h2>Skills</h2>
+<h2>個人專案</h2>
 <ul>
-<li><b>Engineering:</b> Java 8/17 · Spring Boot · Angular 8/17 · Oracle DB · Redis · Docker · Playwright</li>
-<li><b>AI engineering:</b> Claude API · LLM pipeline &amp; tool-safety design · spec-driven AI workflows</li>
-<li><b>Tools:</b> IntelliJ IDEA · Git · Azure DevOps · DataGrip</li>
-<li><b>Languages:</b> Mandarin (native) · English (fluent) · Japanese (JLPT N3)</li>
+<li><b>flow-expression-engine</b> — 型別感知的表達式引擎，純 Java 17、零依賴：Shunting-yard 解析成 RPN 後求值，並在型別無意義的運算上直接擋下、回報業務人員看得懂的錯誤。為上述規則引擎的表達式層 clean-room 重寫。<a href="https://github.com/reynoldsliu/flow-expression-engine">github.com/reynoldsliu/flow-expression-engine</a></li>
+<li><b>doc-pipeline</b> — 會議逐字稿轉標準化文件的 LLM pipeline。Provider 以環境變數抽換（Claude／Gemini 零程式碼切換）、prompt 模板是資料、內建 fake provider 讓 CI 完全離線；並附 eval 基準以確定性結構檢查加 LLM judge 評分產出品質。<a href="https://github.com/reynoldsliu/doc-pipeline">github.com/reynoldsliu/doc-pipeline</a></li>
+<li><b>voice-mac-agent</b> — 以 Telegram 語音控制 Mac 的 AI 助理。本機優先（Whisper + ollama）；LLM 只能從白名單挑工具、永不執行原始文字 —— 安全邊界在程式碼而非 prompt，且有測試守著。<a href="https://github.com/reynoldsliu/voice-mac-agent">github.com/reynoldsliu/voice-mac-agent</a></li>
+<li><b>appup</b> — 零依賴 Python CLI，跨五種套件管理器盤點 Mac 上所有軟體並標示過期與 EOL，預設唯讀。<a href="https://github.com/reynoldsliu/appup">github.com/reynoldsliu/appup</a></li>
+</ul>
+
+<h2>學歷</h2>
+<div class="role"><b>暨南大學（廣州）— 通信工程學士</b><span>2022.06</span></div>
+<!--<div class="role"><b>資訊碩士 — 澳洲墨爾本</b><span>2027 入學</span></div>-->
+
+<h2>技能</h2>
+<ul>
+<li><b>後端：</b>Java 8/17 · Spring Boot · Oracle DB · Redis · Docker · JPA/MyBatis</li>
+<li><b>前端：</b>Angular 8/17 · Vue 3 · TypeScript</li>
+<li><b>AI 工程：</b>Claude API · LLM pipeline 與工具安全設計 · eval 設計 · spec-driven 開發流程</li>
+<li><b>測試：</b>JUnit · Playwright E2E · 無障礙測試規範</li>
+<li><b>工具：</b>Git · IntelliJ IDEA · Azure DevOps · DataGrip</li>
+<li><b>語言：</b>中文（母語）· 英文（流利）· 日文（N3）</li>
 </ul>
 </div>
 </body>

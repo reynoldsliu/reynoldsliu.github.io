@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Task Flow Engine — a configurable rule engine | Reynolds Liu</title>
+<meta name="description" content="Moving business rules out of code and into the database: the Task/Block execution model, a shunting-yard and SpEL expression pipeline, dynamic queries, and execution-path log analysis.">
+<meta property="og:title" content="Task Flow Engine — a configurable rule engine">
+<meta property="og:description" content="How a data-driven rule engine works: execution model, expression pipeline, dynamic queries, log analysis.">
+<link rel="alternate" hreflang="zh-Hant" href="https://reynoldsliu.github.io/projects/taskengine.html">
+<link rel="alternate" hreflang="en" href="https://reynoldsliu.github.io/en/projects/taskengine.html">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+  <span class="lang"><a href="../../projects/taskengine.html">中文</a><em>/</em><a href="taskengine.html" aria-current="true">EN</a></span>
+</nav>
+
+<article>
+<h1>Task Flow Engine — a configurable rule engine</h1>
+<p class="sub">A rule engine and visual flow editor for a corporate lending platform · Java/Spring · Vue 3 + GoJS + Electron</p>
+
+<div class="note">
+This was a <strong>team project</strong> (3 people) at my employer. The source code belongs to the
+company and is not public. This page describes the architecture and the parts I owned; it contains
+no real business rules or client information. I rewrote the expression-engine portion clean-room as
+a runnable open-source library:
+<a href="https://github.com/reynoldsliu/flow-expression-engine">flow-expression-engine</a>.
+</div>
+
+<h2>The problem</h2>
+<p>
+Batch and workflow-style financial processing runs a chain of conditional checks over many records,
+branching and looping on the results. The conventional approach writes those rules directly into
+code — so every rule change means editing, testing and redeploying. The codebase swells as rules
+accumulate, logic scatters, and nothing is traceable. In banking, business rules are precisely the
+thing that changes most often.
+</p>
+
+<h2>The design: turn flow logic into data</h2>
+<p>
+Business checks never enter the codebase. Each step of a flow is one row in a configuration table;
+the engine reads that configuration and assembles an executable chain of tasks. Changing a rule
+becomes data maintenance rather than a code change.
+</p>
+<pre class="block">
+<span class="k">TASK_FLOW</span>  (one row = one task node)
+├─ TASK_TYPE        CONTROL (branch/loop) │ OPERATOR (compute) │ QUERY (lookup)
+├─ BLOCK_ID / SEQ   the block a task belongs to, and its order within that block
+├─ NEXT_BLOCK_ID    the block to branch to when the condition holds
+├─ NESTED_BLOCK_ID  nested block — the body of a FOR loop
+├─ SOURCE_FROM      data source: query result │ variable pool
+├─ LOGIC_TYPE …     EQUAL / GREATER / LESS / ALWAYS + target field and comparison value
+├─ OPERATOR_EXPRESSION  expression (arithmetic, dates, financial functions)
+└─ VARIABLE_NAME    name under which a result is stored in the variable pool
+</pre>
+<p>
+At runtime the engine walks tasks from the starting block in sequence order: CONTROL tasks decide
+where the flow goes (including FOR loops and nested loops), OPERATOR tasks write results into the
+variable pool, and QUERY tasks fetch data for later conditions to use. Those three task types
+compose into a complete business-check flow — and every decision leaves a log entry behind.
+</p>
+
+<h2>The expression engine: from string to executable decision</h2>
+<p>
+A rule stored in a table is just a string. Turning it into safe program behaviour takes a small
+compilation pipeline. I rewrote this part clean-room as an open-source library:
+<a href="https://github.com/reynoldsliu/flow-expression-engine">flow-expression-engine</a>
+(pure Java 17, zero dependencies, 15 tests) — everything described here actually runs there.
+</p>
+<pre class="block">
+"AMT * 0.8 &gt; LIMIT"  ─→  <span class="k">Shunting-yard</span>  ─→  RPN
+                                            │
+                variable lookup ←──  <span class="k">Predicate / SpEL</span>  ←┘
+</pre>
+<ul class="plain">
+  <li><strong>Type-aware evaluation:</strong> more than arithmetic — date ± days, datetime hour offsets, differences between two dates, and other mixed-type combinations all have defined semantics.</li>
+  <li><strong>Illegal operations rejected:</strong> combinations that are meaningless by type (multiplying or dividing a date) are refused during evaluation with a readable message, rather than surfacing an opaque runtime exception. Business staff author these rules — the error has to make sense to them.</li>
+  <li><strong>Financial and custom functions:</strong> common financial calculations ship as built-ins, and business-specific logic can be registered as a custom function without touching the engine core.</li>
+</ul>
+
+<h2>Dynamic queries: even "what to look up" is data</h2>
+<p>
+Query rules are configuration too: a <code>SOURCE_RULE</code> table defines the target table, the
+selected columns and the where clause. At runtime the query is assembled with the JPA Criteria API,
+with column names mapped SNAKE_CASE → camelCase onto entities. Adding a new data source takes one
+configuration row, not a new repository method.
+</p>
+
+<h2>Flow Studio: an editor for humans</h2>
+<p>
+Rules living in database rows are a nightmare to maintain by hand — hence the visual editor. GoJS
+renders the whole task flow, node properties and branches are edited directly on the canvas, and
+JSON import/export bridges back to the tables. It ships to the team as a desktop application
+packaged with Electron.
+</p>
+<table>
+  <tr><th>Layer</th><th>Stack</th></tr>
+  <tr><td>Engine</td><td>Java · Spring Boot · rule tables · full execution log</td></tr>
+  <tr><td>Editor</td><td>Vue 3 (Composition API) · TypeScript · Vite · GoJS · PrimeVue</td></tr>
+  <tr><td>Packaging</td><td>Electron Forge (Windows release)</td></tr>
+  <tr><td>Testing</td><td>Playwright E2E · Vitest · JUnit</td></tr>
+</table>
+
+<h2>What I owned</h2>
+<ul class="plain">
+  <li><strong>Execution-path log analyser (Flow Studio):</strong> the price of "configuration as program" is debuggability — when something goes wrong there is no stack trace, only a long execution log.
+  My module takes an uploaded engine log, reconstructs the path that actually ran, and presents it as a table of decision points: which task, on what condition, sent the flow where.
+  It preselects the relevant analysis fields per business module, and aggregates result codes using the display flag so nothing is over-reported.
+  It cut debugging from half a day of reading logs by hand down to minutes — this module is what makes a data-driven rule architecture operable at all.</li>
+  <li><strong>Core flow-editor fixes:</strong> restricting a task's successor candidates to its enclosing ForBlock (otherwise the editor can draw flows the engine cannot run), treating an empty block as a natural terminus to repair broken loop endpoints, and emitting explicit sequence numbers on export with array-order validation — the diagram and the engine's actual execution must stay strictly equivalent.</li>
+  <li><strong>Engine side:</strong> SpEL financial functions, logic-executor tests, and a refactor of variable resolution.</li>
+  <li><strong>Release management:</strong> Electron packaging and the release process, iterating through an issue → AI-assisted fix → human review workflow that closed several issues per week.</li>
+</ul>
+
+<h2>Trade-offs (the questions I get asked, answered up front)</h2>
+<ul class="plain">
+  <li><strong>Why not an off-the-shelf rule engine (Drools / Camunda)?</strong> The requirements were: maintainable by business staff, deeply integrated with the bank's own tables, and fully traceable logs in the team's working language. The learning and customisation cost of a general-purpose engine exceeded building a small one with a clearly bounded scope — a scope-for-simplicity trade, not NIH.</li>
+  <li><strong>Where does "rules as data" stop?</strong> Only checks that change frequently become data; stable core calculations stay in code. Push it all the way and the system turns into an interpreter with no type checking.</li>
+  <li><strong>Flexibility has a price:</strong> you buy the freedom not to change code, and you pay in debuggability. That is why the logging and the visual tooling are not nice-to-haves — they are the conditions under which this architecture survives.</li>
+  <li><strong>The toolchain is the delivery:</strong> engine, editor, log analysis, packaged release. Miss one corner and users ask you to hard-code the rules again.</li>
+</ul>
+
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>

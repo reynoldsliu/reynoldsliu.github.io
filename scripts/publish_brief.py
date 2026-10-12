@@ -102,8 +102,12 @@ def main() -> int:
         sys.exit(__doc__)
     src = Path(sys.argv[1])
     push = "--no-push" not in sys.argv
-    today = datetime.date.today().isoformat()
-    title, body = md_to_html(src.read_text(encoding="utf-8"))
+    # 日期取自檔名（...YYYY-MM-DD.md），補發舊稿才不會全部撞成今天
+    m = re.search(r"(\d{4}-\d{2}-\d{2})", src.name)
+    today = m.group(1) if m else datetime.date.today().isoformat()
+    text = src.read_text(encoding="utf-8")
+    text = re.sub(r"\A---\n.*?\n---\n", "", text, flags=re.S)  # 去掉 YAML frontmatter
+    title, body = md_to_html(text)
     desc = f"{today} 論文導讀：{title}"
 
     page = ROOT / "writing" / f"brief-{today}.html"
