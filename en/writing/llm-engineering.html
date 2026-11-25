@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How LLM application engineering evolves | Reynolds Liu</title>
+<meta name="description" content="From prompt to context to harness to loop: each new concept solves the bottleneck the previous layer hit at scale. Using that pattern to predict what comes next.">
+<meta property="og:title" content="How LLM application engineering evolves: from prompt to loop, and what comes next">
+<meta property="og:description" content="Predicting verification and orchestration engineering — and what it means for where an engineer should stand.">
+<link rel="alternate" hreflang="zh-Hant" href="https://reynoldsliu.github.io/writing/llm-engineering.html">
+<link rel="alternate" hreflang="en" href="https://reynoldsliu.github.io/en/writing/llm-engineering.html">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+  <span class="lang"><a href="../../writing/llm-engineering.html">中文</a><em>/</em><a href="llm-engineering.html" aria-current="true">EN</a></span>
+</nav>
+
+<article>
+<h1>How LLM application engineering evolves: from prompt to loop, and what comes next</h1>
+<p class="sub">July 2026 · Reynolds Liu</p>
+
+<h2>Each new concept solves the bottleneck the previous layer hit at scale</h2>
+<table>
+  <tr><th>Concept</th><th>Bottleneck it solves</th><th>Level</th></tr>
+  <tr><td>Prompt engineering</td><td>how to phrase a single instruction</td><td>token</td></tr>
+  <tr><td>Context engineering</td><td>what goes in the window, and what gets cut</td><td>window</td></tr>
+  <tr><td>Harness engineering</td><td>what the model can touch — tools, environment, permissions</td><td>environment</td></tr>
+  <tr><td>Loop engineering</td><td>how it iterates, self-corrects, and knows when to stop</td><td>time</td></tr>
+</table>
+<p>
+The general rule for how a new discipline gets named: when a sub-step's failure modes, required
+skills and tooling all diverge from the parent field, it splits off and takes a name of its own —
+the way context engineering was once just one step inside prompt engineering.
+</p>
+
+<h2>Extrapolating: the next disciplines to be named</h2>
+<ul class="plain">
+  <li><strong>Verification engineering — most likely to surface first.</strong> The trigger signal: verifying becomes harder than producing, because agent throughput far exceeds human review capacity.
+  The core problems are designing task structures where verification costs far less than production, writing rubrics that resist reward hacking, judge models, and the statistics of sampled auditing.</li>
+  <li><strong>Orchestration / fleet engineering.</strong> Multi-agent is an architecture; fleet is a discipline — the same relationship multithreading has to concurrent programming.
+  Task decomposition, context-passing protocols between agents, conflict arbitration, failure detection and replacement, cost allocation — <strong>underneath, these are all old distributed-systems problems</strong>.</li>
+</ul>
+
+<h2>Discontinuities: scenarios that break the ladder</h2>
+<ul class="plain">
+  <li><strong>Economy engineering:</strong> central dispatch gives way to market mechanisms — bidding, bounties, compensation — and management becomes mechanism design.</li>
+  <li><strong>Ecology engineering:</strong> you stop designing behaviour and start designing selection pressure. The engineer becomes a breeder rather than an architect.</li>
+  <li><strong>De-engineering:</strong> the bet that all of this engineering is scaffolding for a period when models were not strong enough — the way deep learning evaporated feature engineering.
+  What remains is intent specification: stating clearly what you want. Specification and requirements analysis, the oldest skills in the trade, come full circle to become the last moat.</li>
+</ul>
+
+<h2>Management work is becoming engineering artefacts</h2>
+<ul class="plain">
+  <li>Task-assignment judgement → orchestrator routing logic (code you can A/B test)</li>
+  <li>Code review taste → a rubric file (version-controlled, iterable)</li>
+  <li>Onboarding docs → loadable agent skills (diffable, revertible, copyable ten thousand times)</li>
+  <li>Deciding to replace someone → an agent-swap policy triggered by eval scores</li>
+</ul>
+<p>The difference: human management runs on oral tradition; engineering artefacts can be diffed, rolled back, tested and copied without limit.</p>
+
+<h2>Where to stand: bet on invariants, not tools</h2>
+<table>
+  <tr><th>Invariants (appreciate over time)</th><th>Tools (half-life in months)</th></tr>
+  <tr><td>Distributed systems, OS and database internals</td><td>Tricks specific to one agent framework</td></tr>
+  <tr><td>Reading code and judging whether it is good</td><td>Framework specifics</td></tr>
+  <tr><td>Turning vague requirements into precise specifications</td><td></td></tr>
+  <tr><td>Statistical intuition — the foundation of eval and verification</td><td></td></tr>
+</table>
+<p>
+Pick your position: stand <strong>upstream</strong> of agents — building orchestration, sandboxes and
+memory systems — or <strong>beside</strong> them, in the eval and reliability engineering that
+verifies their output. Do not stand downstream, on well-specified tickets, CRUD and bug fixes; that
+is the layer agents consume first. The way out is to shift from completing tasks to owning
+problems: carrying one system from requirement, through production, to the incident at 3am.
+</p>
+
+<h2>In one sentence</h2>
+<p>
+You do not need to predict which concept wins — only to stand where every scenario overlaps:
+<strong>deep systems fundamentals × fast judgement × the ability to say clearly what you want.</strong>
+</p>
+
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>

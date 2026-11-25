@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本週導讀：通過檢查不等於做對——補丁效能、LLM 呼叫點契約與 Design by Contract | Reynolds Liu</title>
+<meta name="description" content="2026-11-03 論文導讀：本週導讀：通過檢查不等於做對——補丁效能、LLM 呼叫點契約與 Design by Contract">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+</nav>
+<article>
+<h1>本週導讀：通過檢查不等於做對——補丁效能、LLM 呼叫點契約與 Design by Contract</h1>
+<p class="sub">2026-11-03 · 每週論文導讀（自動發佈）</p>
+<p>本週主題是軟體工程（slot 1）。兩篇近期論文從不同方向問同一件事：「有檢查」和「檢查得對」之間差多少。一篇看通過 SWE-bench 測試的補丁跑得多快，一篇看 agent 系統裡每個 LLM 呼叫點周圍的程式到底保證了什麼。經典則是 Bertrand Meyer 1992 年的 Design by Contract，正好提供了理解第二篇的詞彙。</p>
+<h2>1. Not All Correct Fixes Run Alike：Repository 層級修 bug 時，補丁效能的實證研究</h2>
+<p><strong>Han Peng, Xing Hu, Feifei Niu, Huan Li, Xin Xia</strong> · arXiv:2610.13563（cs.SE），2026 年 10 月 · <a href="https://arxiv.org/abs/2610.13563">論文連結</a></p>
+<p><strong>問題。</strong> SWE-bench 這類 benchmark 判斷 LLM 修 bug 的成果，標準幾乎只有一個：補丁能不能讓原本失敗的測試（稱為 FAIL_TO_PASS，簡稱 F2P）通過。但兩個都「正確」的補丁，執行效能可能差很多。要為每個 benchmark 題目另外寫效能 workload 太貴，所以這件事一直沒人系統性地量。</p>
+<p><strong>做法。</strong> 作者的關鍵想法是：F2P 測試本身就會執行被修改的那段程式，那就直接把它當成效能 workload。具體上，他們只保留恰好有一個 F2P 測試的題目，用 decorator 包住測試函式，先跑 10 次暖身，再在同一個 process 裡重複呼叫 N 次（N 校準到最快的解法約跑 4 到 8 秒），整體再做 5 次獨立 process 重複。量測指標是硬體效能計數器讀出的指令數，加上 wall-clock 時間，環境用 Docker、隔離 CPU 核心與 NUMA 綁定來壓低雜訊。統計上，他們把量測值取對數後做 Welch ANOVA（不假設各組變異數相等的變異數分析），p &lt; 0.05 就算「可區分」。他們特別說明為何不用前人的 RSD（相對標準差）：RSD 只看不同解法之間的散布，忽略同一解法自身的量測波動，也容易被幾乎相同的解法干擾。</p>
+<p><strong>證據。</strong> 四個模型（Claude Opus 5、GPT 5.6、DeepSeek V4 Pro、Qwen 3.8 Max）搭配 SWE-agent，在 SWE-bench 與 SWE-bench-Live 的 verified 子集各 500 題上產生補丁。經過層層過濾（多個 F2P 測試、無法重複執行、測試含 I/O 都剔除），剩 339 題可量測；把邏輯相同（正規化 AST 相同）的補丁合併後，有 262 題至少存在兩種不同的正確解（含開發者原始解）。以指令數判斷，其中 110 題（41.98%）的正確解之間有統計上顯著的效能差異；用 wall-clock 時間則是 91 題（34.73%），因為時間比較吵。</p>
+<p>最有意思的是排名。以解題率排序是 Claude（87.32%）&gt; Qwen &gt; GPT &gt; DeepSeek；但在「哪個模型的補丁最常是最快的」這一項，DeepSeek 佔 26.3%、GPT 24.7%，Claude 只有 15.0%，甚至比開發者原始解的 18.7% 還低。作者據此主張解題率與效能大致獨立，排名近乎反轉。案例研究更具體：astropy 的某題中，開發者先前刻意移除了笨重的 pkg_resources 依賴；開發者解與 DeepSeek 保留輕量做法，約 488 億條指令、3.97 秒；Claude 在出錯時才退回 pkg_resources，約 649 億條指令、5.49 秒；GPT 與 Qwen 則直接無條件改回 pkg_resources，約 1,034 億條指令、9.15 秒。全部都通過測試，只有效能量測抓得出這是一次架構倒退。</p>
+<p><strong>限制。</strong> 第一，整體平均差距其實很小：四個模型相對開發者解的指令數比例都落在約 99% 到 101%，差異集中在部分題目，而非全面性的「某模型寫得比較慢」。第二，量的是整個測試，假設資料準備與 assertion 的成本對各解法相同；如果補丁改到這些部分，方法無法察覺。第三，過濾很嚴格（1,000 題剩 339 題），只有 Python，且所有補丁都來自 SWE-agent 一種框架，作者自己也列為外部效度威脅。</p>
+<p><strong>為什麼值得在意。</strong> 如果你在做 coding agent 的評估、或在課堂專案裡比較不同模型，這篇提醒你：pass rate 是必要條件，不是全部。它也提供一套可以直接借用的量測方法（指令數加 Welch ANOVA），比單看平均執行時間嚴謹得多。</p>
+<p><strong>自我檢查</strong></p>
+<ul class="plain">
+<li>Q1：為什麼作者要求題目「恰好只有一個 F2P 測試」，而且要剔除含 I/O 的測試？</li>
+<li>Q2：作者說解題率與效能「排名近乎反轉」，但各模型相對開發者解的平均指令數比例都在 99% 到 101% 之間。這兩件事如何同時成立？</li>
+<li>Q3：astropy 的案例說明了什麼是單靠正確性測試抓不到的？</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>A1：方法是把單一 F2P 測試直接當效能 workload 並重複執行上萬次；多個測試難以對應到單一 workload，I/O 則會讓量測雜訊過大、無法穩定比較。</li>
+<li>A2：差異集中在約四成可區分的題目上，「最常最快」看的是逐題勝出比例，而非整體平均；平均接近不代表逐題排名相近。</li>
+<li>A3：所有補丁都通過測試，但其中兩種做法把開發者刻意移除的重型依賴改了回來，指令數與執行時間翻倍以上，這是一種架構層級的倒退。</li>
+</ul>
+<h2>2. When Code Becomes an LLM Call：Agent 系統中呼叫點契約的實證研究</h2>
+<p><strong>Shihao Weng, Longtian Wang, Yang Feng 等（共 9 位作者）</strong> · arXiv:2610.24545（cs.SE / cs.AI / cs.CR），2026 年 10 月 · <a href="https://arxiv.org/abs/2610.24545">論文連結</a></p>
+<p><strong>問題。</strong> Agent 系統把原本由程式碼負責的決策交給 LLM：下一步用哪個工具、某個動作是否被允許、甚至直接產生要執行的程式碼。LLM 的行為不是程式碼固定下來的，每次跑都可能不同，所以真正的保證只能來自呼叫點周圍的程式。問題是：這些程式實際保證了多少？</p>
+<p><strong>做法。</strong> 作者把每次 LLM 呼叫視為一個帶契約的指令，分三段：<strong>前置條件</strong>（什麼時候、用什麼輸入才可以呼叫）、<strong>prompt 約束</strong>（指令、輸出 schema、固定參數）、<strong>後置條件</strong>（程式接受什麼樣的回覆後才交給下游使用）。每條約束再分三種保證等級：只在 prompt 裡「拜託」模型（prompt-only）、由程式碼檢查（code-checked）、或因為根本沒給那個能力而不可能違反（capability-bound）。</p>
+<p>最值得學的是推導「應有契約」的流程。一個多 agent pipeline 刻意隔離資訊：規格 agent 讀呼叫點，寫出與實作無關的任務描述；推導 agent 只看規格、看不到程式碼，提出這個呼叫點應該有哪些約束；萃取 agent 只看程式碼，列出實際有被強制的約束；最後比較 agent 對每條應有約束給出判決（滿足、部分滿足、放錯位置、缺失、衝突）。這樣「應有的契約」不會只是把現有實作抄一遍。整個流程經過 17,428 次人工判斷驗證，兩位審查者獨立標註、第三位裁決，一致性（Gwet's AC1）在 0.91 到 0.99。</p>
+<p><strong>證據。</strong> 研究對象是 40 個熱門開源 agent 系統、共 1,340 萬行程式碼、四種語言、496 個 LLM 呼叫點。48% 的 LLM 輸出會流進控制流程或被執行，其中 73% 從頭到尾沒有人看過。82% 的呼叫點在呼叫前後都有檢查，然而應有約束中有 63% 沒被滿足，能滿足完整契約的呼叫點只有 5.3%；後置條件的缺口率最高（72%）。十種反覆出現的模式解釋了 99% 的缺口，最常見的是呼叫前輸入沒檢查（約 19%）、回覆格式只檢查一部分（約 15%）、內容未經檢查就接受（約 15%）。另有約 9% 是「fail-open」：回覆無效時退回一個允許動作的預設值。作者在 38 個實際可觸發的機制上示範：只要一小段程式碼補上應有約束，原本的攻擊就被擋下。例子之一是某工具會把任何含特定標記的回覆當 Python 直接執行，沒有核准也沒有 sandbox，但文件卻宣稱它是 sandboxed；agent 讀到的檔案只要內含適當文字，就能誘發執行。</p>
+<p><strong>限制。</strong> 「應有契約」是規範性重建，換一組分析者可能訂出不同約束，作者承認無法完全排除程式碼資訊外洩到推導過程。每個系統只分析一個 commit；觸發測試只用一個替代模型、最多十種 payload 寫法，只證明「可以觸發」，不代表在各系統預設模型下的實際發生頻率。靜態分析也可能漏掉透過動態派發抵達的呼叫。</p>
+<p><strong>為什麼值得在意。</strong> 若你在寫 agent 或任何「把 LLM 輸出接進程式」的專案，這篇給了一份具體檢查清單：輸入有沒有驗、回覆的格式和內容是否都驗、無效時是 fail-closed 還是 fail-open、元件是否拿到比需要更多的工具權限。它的核心結論也很好記：有檢查，不等於檢查足夠。</p>
+<p><strong>自我檢查</strong></p>
+<ul class="plain">
+<li>Q1：推導 agent 為什麼刻意看不到程式碼？如果看得到，結果會有什麼偏差？</li>
+<li>Q2：「82% 的呼叫點前後都有檢查」與「只有 5.3% 滿足完整契約」為什麼不矛盾？</li>
+<li>Q3：fail-open 處理具體會造成什麼風險？</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>A1：為了讓「應有契約」獨立於實作；若看得到程式碼，推導出的約束容易照抄現有檢查，缺口就會被低估。</li>
+<li>A2：有檢查只代表存在某些前後置檢查，不代表涵蓋所有應有約束；多數呼叫點只檢查了部分格式或部分輸入，仍有 63% 的應有約束未滿足。</li>
+<li>A3：LLM 回覆無效時程式退回一個「允許」的預設值，等於把錯誤或被操縱的輸出轉成放行，動作會在沒人察覺的情況下被執行。</li>
+</ul>
+<h2>經典：Applying "Design by Contract"</h2>
+<p><strong>Bertrand Meyer</strong> · IEEE Computer 25(10)，1992 年 10 月 · <a href="https://se.inf.ethz.ch/~meyer/publications/computer/contract.pdf">PDF（ETH Zürich）</a></p>
+<p>這篇文章是 Design by Contract（契約式設計）最廣為引用的入門版本，內容改寫自 Meyer 的著作，背景是 Eiffel 語言。它要解決的是可靠性：當元件會被成千上萬個應用重用時，錯誤的代價比一般程式更大。</p>
+<p><strong>核心想法。</strong> 呼叫一個 routine 就像把工作外包：雙方簽一份契約。<strong>前置條件</strong>是客戶（呼叫端）的義務、供應方的好處；<strong>後置條件</strong>是供應方的義務、客戶的好處；<strong>類別不變式</strong>（class invariant）是物件在每個公開操作前後都必須成立的一致性條件。這些都寫成程式裡的 assertion，而不是註解。</p>
+<p>Meyer 在這篇裡最有爭議、也最有價值的立場是反對防禦式程式設計。防禦式程式設計主張「每個模組都盡量多檢查，就算和呼叫端重複也無妨」；Meyer 認為這些冗餘檢查只會增加複雜度，而複雜度正是品質最大的敵人。他的規則很絕對：一個條件要嘛寫在前置條件裡由呼叫端保證，要嘛在 routine 內部處理，絕不兩邊都放。至於該放哪邊沒有絕對答案，可以是「苛刻型」（前置條件強，責任在客戶）或「寬容型」，判準是整體架構最簡單。他也指出前置條件不代表每次呼叫前都要 if 檢查：如果前一個呼叫的後置條件已經蘊含它，就不需要再測。</p>
+<p><strong>繼承即轉包。</strong> 文章後半把同樣的框架用在繼承與動態綁定上：子類別覆寫方法，等於把工作轉包給子承包商，而呼叫端只看得到父類別的契約。所以子類別只能放寬前置條件、強化後置條件，否則就是在「騙」呼叫端。這和後來 Liskov 替換原則的直覺一致，也是理解多型安全性的好起點。</p>
+<p><strong>例外處理。</strong> Meyer 把例外定義為「routine 無法履行契約」，合理的回應只有幾種：換策略重試（resumption，Eiffel 用 rescue 加 retry）、恢復一致狀態後向上回報失敗（他稱為 organized panic），以及少見的假警報。無論哪種，都必須先恢復不變式。執行期 assertion 監控則主要用於除錯，Eiffel 預設開啟前置條件檢查，因為新寫的應用程式最容易用錯函式庫。</p>
+<p><strong>今天還重要嗎。</strong> 很重要，而且本週第二篇就是證據：那篇論文的「前置條件 / prompt 約束 / 後置條件」幾乎就是把 Meyer 的框架搬到 LLM 呼叫點上。不同的是，LLM 這個「供應方」本身不保證任何後置條件，所以 Meyer 反對冗餘檢查的論點在這裡要打折：當供應方不可信時，後置條件必須由呼叫端用程式碼強制。已被時代修正的部分包括：Eiffel 式的 rescue/retry 沒有成為主流；文章自己也提到，前置條件在並行環境下語意會出問題（檢查完 queue 未滿，下一刻可能被別人塞滿）。</p>
+<p><strong>自我檢查</strong></p>
+<ul class="plain">
+<li>Q1：Meyer 為什麼主張一個條件不能同時寫在前置條件和 routine 內部的 if 判斷裡？</li>
+<li>Q2：子類別覆寫方法時，為什麼不能加強前置條件？</li>
+<li>Q3：把 Meyer 的契約框架套到 LLM 呼叫點時，哪一個前提不再成立？</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>A1：重複檢查只增加複雜度，而且讓責任歸屬不清；契約應明確指定由客戶或供應方其中一方負責。</li>
+<li>A2：呼叫端只依據父類別的契約呼叫；子類別若要求更多，符合父類別契約的合法呼叫可能被拒或處理錯誤。</li>
+<li>A3：Meyer 假設供應方會履行後置條件；LLM 不保證輸出，所以後置條件必須由呼叫端在程式碼中檢查，不能只在 prompt 中要求。</li>
+</ul>
+<h2>如果只做一件事</h2>
+<p>找一個你寫過或用過的、把 LLM 輸出接進程式的地方（一個 tool call、一段 JSON 解析、一個自動執行的指令），照第二篇的三段契約寫下：呼叫前檢查了什麼、prompt 要求了什麼、回覆被接受前驗證了什麼。特別看回覆無效時是 fail-open 還是 fail-closed。然後重讀 Meyer 文章中討論防禦式程式設計的那一段，想想他的論點在「供應方不可信」時哪裡需要修正。</p>
+<h2>附註</h2>
+<ul class="plain">
+<li>本次為排程自動執行，依輪替進入 slot 1（軟體工程與架構）。</li>
+<li>依發佈腳本限制，未使用 YAML frontmatter 與 Obsidian 折疊 callout，答案改以一般清單列在問題之後。</li>
+<li>第一篇摘要中的模型名稱、百分比皆取自論文 v1；第二篇為預印本，尚未經同儕審查。</li>
+</ul>
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>

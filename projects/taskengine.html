@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Task Flow Engine — 可設定的任務流程引擎 | Reynolds Liu</title>
+<meta name="description" content="把業務規則從程式碼移到資料庫：Task/Block 執行模型、Shunting-yard + SpEL 表達式引擎、動態查詢與 LOG 執行路徑分析的架構解析。">
+<meta property="og:title" content="Task Flow Engine — 可設定的任務流程引擎">
+<meta property="og:description" content="規則資料化架構的深度解析：執行模型、表達式引擎、動態查詢、LOG 路徑分析。">
+<link rel="alternate" hreflang="zh-Hant" href="https://reynoldsliu.github.io/projects/taskengine.html">
+<link rel="alternate" hreflang="en" href="https://reynoldsliu.github.io/en/projects/taskengine.html">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+  <span class="lang"><a href="taskengine.html" aria-current="true">中文</a><em>/</em><a href="../en/projects/taskengine.html">EN</a></span>
+</nav>
+
+<article>
+<h1>Task Flow Engine — 可設定的任務流程引擎</h1>
+<p class="sub">企業金融授信平台的規則引擎 + 圖形化流程編輯器 · Java/Spring · Vue 3 + GoJS + Electron</p>
+
+<div class="note">
+這是任職期間的<strong>團隊專案</strong>（3 人），原始碼屬公司所有、不公開。
+本頁呈現架構設計與我實際負責的部分；文中不含任何真實業務規則與客戶資訊。
+表達式引擎那一段我以 clean-room 方式重寫成可執行的開源版本：
+<a href="https://github.com/reynoldsliu/flow-expression-engine">flow-expression-engine</a>。
+</div>
+
+<h2>問題</h2>
+<p>
+批次或流程型的金融業務，需要對多筆資料依規則執行一連串條件檢核，並依結果分支、迴圈。
+傳統做法把這些規則直接寫成程式碼 —— 規則一改就要改 code、測試、部署；
+程式碼隨規則膨脹，邏輯散落各處難以追蹤。金融業的業務規則偏偏是變動最頻繁的東西。
+</p>
+
+<h2>設計：把流程邏輯資料化</h2>
+<p>
+業務檢核不落入 codebase：每一步流程是流程表裡的一列資料，
+引擎讀取設定、組合成可執行的任務鏈 —— 規則調整變成資料維護，不再是程式變更。
+</p>
+<pre class="block">
+<span class="k">TASK_FLOW</span>（每列＝一個任務節點）
+├─ TASK_TYPE        CONTROL（分支/迴圈）│ OPERATOR（運算）│ QUERY（查詢）
+├─ BLOCK_ID / SEQ   任務所屬群組與群組內執行順序
+├─ NEXT_BLOCK_ID    條件成立時導向的下一個群組（分支）
+├─ NESTED_BLOCK_ID  巢狀群組（FOR 迴圈的迴圈體）
+├─ SOURCE_FROM      資料來源：DB 查詢結果 │ 變數池
+├─ LOGIC_TYPE …     EQUAL / GREATER / LESS / ALWAYS ＋ 目標欄位與比較值
+├─ OPERATOR_EXPRESSION  運算表達式（四則、日期、金融函數）
+└─ VARIABLE_NAME    運算/查詢結果暫存至變數池的名稱
+</pre>
+<p>
+執行時引擎從起始 Block 依 SEQ 逐一執行任務：CONTROL 任務決定走向（含 FOR 迴圈與巢狀迴圈），
+OPERATOR 任務把運算結果寫進變數池，QUERY 任務把查詢結果供後續判斷使用 ——
+三類任務自由組合就能表達完整的業務檢核流程，且每一步判斷都留下 log 可回溯。
+</p>
+
+<h2>表達式引擎：字串規則怎麼變成可執行的判斷</h2>
+<p>
+存在資料表裡的規則是字串，要安全地變成程式行為，中間是一條編譯管線。
+這一段我以 clean-room 方式重寫成可執行的開源函式庫：
+<a href="https://github.com/reynoldsliu/flow-expression-engine">flow-expression-engine</a>（純 Java 17、零依賴、15 tests）——
+本頁講的機制在那裡都跑得起來。
+</p>
+<pre class="block">
+"AMT * 0.8 &gt; LIMIT"  ─→  <span class="k">Shunting-yard</span>  ─→  RPN
+                                            │
+                  變數池取值 ←──  <span class="k">Predicate / SpEL</span>  ←┘
+</pre>
+<ul class="plain">
+  <li><strong>型別感知的運算：</strong>不只四則運算 —— 日期 ± 天數、LocalDateTime 加減時、日期差值、整數與月份相乘等混合型別運算都有定義。</li>
+  <li><strong>非法運算防護：</strong>型別上無意義的組合（如日期相乘、日期相除）在求值層直接拒絕並回報，而不是丟出難解的 runtime exception —— 規則是業務人員設定的，錯誤訊息必須讓他們看得懂。</li>
+  <li><strong>金融運算與自定義函數：</strong>常用金融計算內建為函數；業務特有邏輯可註冊 Custom Function 擴充，不動引擎核心。</li>
+</ul>
+
+<h2>動態查詢：連「查什麼」都是資料</h2>
+<p>
+查詢規則同樣資料化：<code>SOURCE_RULE</code> 表定義目標資料表、select 欄位與 where 條件，
+執行時以 JPA Criteria API 動態組裝查詢，欄位名稱自動做 SNAKE_CASE → camelCase 映射到 entity。
+新增一種資料來源不需要寫 repository method —— 加一列設定就好。
+</p>
+
+<h2>Flow Studio：給人用的編輯器</h2>
+<p>
+規則存在資料表裡，對維護的人是災難 —— 所以配套做了圖形化編輯器：
+以 GoJS 呈現整條任務流程，直接在畫布上編輯節點屬性、調整分支，
+匯出／匯入 JSON 與資料表對接，並以 Electron 打包成桌面應用發佈給團隊使用。
+</p>
+<table>
+  <tr><th>層</th><th>技術</th></tr>
+  <tr><td>引擎</td><td>Java · Spring Boot · 規則資料表 · 完整執行 log</td></tr>
+  <tr><td>編輯器</td><td>Vue 3（Composition API）· TypeScript · Vite · GoJS · PrimeVue</td></tr>
+  <tr><td>桌面打包</td><td>Electron Forge（Windows 發佈）</td></tr>
+  <tr><td>測試</td><td>Playwright E2E · Vitest · JUnit</td></tr>
+</table>
+
+<h2>我負責的部分</h2>
+<ul class="plain">
+  <li><strong>LOG 執行路徑分析模組（Flow Studio）：</strong>「設定即程式」的代價是除錯困難 —— 出問題時沒有 stack trace 可看，只有一長串執行 log。
+  我做的模組讓使用者上傳引擎 log，重建整條實際執行路徑，把「哪個 Task、依什麼條件、把流程導去哪裡」整理成關鍵決策點表格；
+  支援依業務模組快速預設分析欄位，結果碼彙整以顯示註記為判準避免誤報。
+  這個模組把除錯時間從「人工對 log 半天」壓到分鐘級 —— 規則資料化的架構能不能維運，就靠這一塊。</li>
+  <li><strong>流程編輯核心修正：</strong>迴圈區塊內任務的接續候選必須限縮在當前 ForBlock 範圍（否則畫得出執行不了的流程）、
+  空區塊視為自然結束以修復迴圈端點斷線、匯出 JSON 顯式輸出序號並校驗陣列順序一致性 —— 編輯器畫出來的圖與引擎實際執行必須嚴格等價。</li>
+  <li><strong>引擎端：</strong>SpEL 金融運算函數、邏輯執行器測試、變數解析重構。</li>
+  <li><strong>發佈管理：</strong>版本打包（Electron）與發佈流程；以 issue → AI 輔助修正 → 人工 review 的工作流迭代，單週可消化多個修正議題。</li>
+</ul>
+
+<h2>設計取捨（面試常被問，先寫在這）</h2>
+<ul class="plain">
+  <li><strong>為什麼不用現成的規則引擎（Drools / Camunda）？</strong>需求核心是「業務人員可維護 + 與行內資料表深度整合 + 完整中文語境的 log 追蹤」。
+  通用引擎的學習成本與客製成本都高於自建一個範圍明確的小引擎 —— 這是範圍換簡單的取捨，不是 NIH。</li>
+  <li><strong>規則資料化的邊界在哪？</strong>只資料化「會頻繁變的檢核規則」；穩定的核心計算仍在 code 裡。全部資料化會把系統變成沒有型別檢查的直譯器。</li>
+  <li><strong>彈性有價格：</strong>換來不改 code 的彈性，也換來「設定即程式」的除錯難度 —— 所以 log 機制與視覺化工具不是加分項，是這個架構能活下來的必要條件。</li>
+  <li><strong>工具鏈完整才算交付：</strong>引擎、編輯器、log 分析、打包發佈，缺一角使用者就會回頭要求「還是寫死在 code 裡吧」。</li>
+</ul>
+
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>

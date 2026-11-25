@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本週導讀：CLOCK 快取的解析模型、讓 TOCTOU 競態穩定重現，以及 Denning 的 Working Set | Reynolds Liu</title>
+<meta name="description" content="2026-11-23 論文導讀：本週導讀：CLOCK 快取的解析模型、讓 TOCTOU 競態穩定重現，以及 Denning 的 Working Set">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+</nav>
+<article>
+<h1>本週導讀：CLOCK 快取的解析模型、讓 TOCTOU 競態穩定重現，以及 Denning 的 Working Set</h1>
+<p class="sub">2026-11-23 · 每週論文導讀（自動發佈）</p>
+<p>本週主題是 CS 基礎：作業系統與記憶體（slot 4）。第一篇替一整族 CLOCK 類快取替換策略給出可計算的 miss ratio 近似；第二篇把「時間差攻擊（TOCTOU）是否真的修好了」從碰運氣變成可重複的測試。經典選 1968 年 Denning 的 working set 論文：今天的快取模型與記憶體管理，用的仍是它提出的「以最近一段時間內的存取來描述程式需要多少記憶體」這個想法。</p>
+<h2>1. TTL Approximations for a Family of CLOCK-Like Cache Replacement Policies</h2>
+<p><strong>Yirong Wang, Peter Desnoyers, Benny Van Houdt</strong> · arXiv:2611.24549（cs.OS），2026 年 11 月 · <a href="https://arxiv.org/abs/2611.24549">arXiv 連結</a></p>
+<p><strong>問題。</strong> CLOCK 是 LRU 的低成本近似：快取物件排成一個環，每個物件帶一個存取位元，指針（hand）繞圈找可以淘汰的對象。它便宜、好實作，所以作業系統的頁面替換和許多軟體快取都在用。但它很難分析：指針走到哪裡、會淘汰誰，取決於鄰近物件的位元狀態，物件之間互相耦合。作者指出，文獻中一直沒有經典 CLOCK 的解析模型。現有的可解模型只涵蓋它的變體，例如每次請求都推進指針的 CpR，或隨機探測的 Ran-CLOCK。</p>
+<p><strong>方法。</strong> 論文分析的是 CLOCK(K) 這一族：每個物件帶一個 0 到 K 的計數器。命中時加一（上限 K）；缺失時指針往前掃，把正的計數器減一，淘汰第一個計數為 0 的物件；新物件以 0 進場。K = 0 就是 FIFO，K = 1 就是經典 CLOCK，K 越大越接近「看頻率」。</p>
+<p>核心技巧是 TTL 近似，延續 Che 近似（Che approximation）的思路：把「快取容量固定為 C」這個難處理的全域限制，換成「每個物件繞環一圈的時間固定為 τc」。在這個假設下，物件之間就解耦了，可以逐一分析。一個物件每繞一圈：期間若被命中，計數器上升；走到環尾時，若計數為 0 就被淘汰，否則減一、回到環頭再繞一圈。每個物件的 miss 機率是 1/(1 + H)，H 是它被淘汰前預期的命中次數。最後調整 τc，讓所有物件的預期佔用總和剛好等於 C。這個「解一個方程式找 τc」的步驟，就是把容量限制補回來的地方。</p>
+<p>請求模型不只用常見的 IRM（Independent Reference Model：每次請求獨立地依固定機率挑物件），還支援 phase-type renewal 流量，可以表達比 Poisson 更突發或更規律的到達。對每個物件，作者把「到達過程的相位 × 計數器值」建成馬可夫鏈，用矩陣解析方法求解，線性系統的大小是 O(Kd)，d 是相位數。作者也證明對任意容量都存在對應的 τc，但沒有證明唯一。</p>
+<p><strong>證據。</strong> 驗證用 Zipf 熱門度分布做 trace 驅動模擬，每條 trace 10^7 個請求。參數網格包括目錄大小 M 從 30 到 960、Zipf 參數 θ 為 0.5 與 1.1、K 為 0、1、15，以及四種到達模型，共 24 組設定。作者報告預測與模擬的 miss ratio 緊密吻合，且目錄越大誤差越小。不過內文沒有列出誤差數值，只能從圖上讀，這是讀者要自己去看圖確認的地方。另一個結果是：在 IRM 下，miss ratio 隨 K 增大而不增，K 超過 15 之後幾乎沒有額外收益。作者也指出 1993 年一篇 FIFO 性質證明中的符號錯誤，並給出修正。</p>
+<p><strong>限制。</strong> TTL 本身是近似，用時間代替容量；τc 的唯一性沒有證明；「隨 popularity 偏斜度變化的單調性」只有實驗支持，沒有證明。實驗全部是合成 Zipf 流量，沒有用真實系統的 trace，所以在真實工作負載下的準確度還不知道。</p>
+<p><strong>為什麼值得讀。</strong> 這篇是學「快取怎麼建模」的好入門。Che 近似讓你不用跑模擬就能估 miss ratio，在容量規劃時很好用，例如決定 CDN 節點、Redis 或 buffer pool 要開多大。CLOCK(K) 的「K 很小就夠」也對應到實務直覺：多記一點頻率資訊有幫助，但報酬遞減得很快。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>為什麼經典 CLOCK 難以直接分析，而 TTL 近似如何繞過這個困難？</li>
+<li>在 TTL 模型中，「容量固定為 C」這個條件最後是在哪一步補回來的？</li>
+<li>如果你想把這個模型用在一個真實的 Web 快取上，論文的實驗還缺什麼證據？</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>經典 CLOCK 中，指針淘汰誰取決於鄰近物件的計數器狀態，物件之間互相耦合。TTL 近似假設每個物件繞環時間固定為 τc，讓物件彼此獨立，可以逐一求解。</li>
+<li>在選 τc 的時候：調整 τc，讓所有物件的預期佔用總和等於 C。</li>
+<li>實驗只用合成的 Zipf 流量，誤差也只畫在圖上，沒有列成表。還缺真實 trace 的驗證，以及具體的誤差數字。</li>
+</ul>
+<h2>2. Taking Time Out of TOCTOU: From Race Reproduction to Security Discovery</h2>
+<p><strong>Hasnain Naeem, Ryan Henry</strong> · arXiv:2611.21214，2026 年 11 月 · <a href="https://arxiv.org/abs/2611.21214">arXiv 連結</a></p>
+<p><strong>問題。</strong> TOCTOU（time-of-check to time-of-use）是一種競態漏洞：程式先檢查某個路徑或物件（例如確認它不是 symlink），再使用它；攻擊者在這兩步之間把東西換掉。這類漏洞難在重現：攻擊要「贏得競態」才會觸發，所以一個仍有漏洞的版本，可能只是因為這次攻擊輸了而通過測試。結果是修補驗證、回歸測試和 git bisect 都不可靠。作者舉的例子是 runc 的 CVE-2021-30465：原發現者開了 19 個受害容器、跑 4 個替換迴圈，最後 19 個裡只有 6 個逃逸成功。</p>
+<p><strong>方法。</strong> 作者做了一個測試控制器 Chronos。思路是反過來：不讓攻擊者去搶時間，而是把受害者「暫停住」。具體做法是用 seccomp 的 user notification 機制，在受害程式進入「使用」那個 syscall（例如 mount()）、kernel 解析路徑之前，讓呼叫的執行緒停住。這時控制器執行攻擊者的替換，完成後才放行。競態窗口因此變成無限長，攻擊每次都能「贏」。syscall 以外的情況，另有 ptrace 引擎（暫停使用者空間指令）和在 KVM 客體中暫停 kernel 指令的引擎。</p>
+<p>另一半的設計同樣重要：怎麼判定結果。每次執行會被標為「有漏洞」「已修補」或「無法判定」。要標「有漏洞」，必須有證據顯示那次使用真的作用在攻擊者換上的物件上；要標「已修補」，也需要正面證據，例如使用時仍拿到原本驗證過的物件、程式明確拒絕、或根本沒有呼叫。沒抓到證據、或競態沒成立，一律標「無法判定」，<strong>不能</strong>算修好。bisect 時會跳過無法判定的版本。每個案例用一份 YAML 規格描述：目標、要暫停哪個呼叫、攻擊者怎麼改、結果怎麼判。</p>
+<p><strong>證據。</strong> 以 CVE-2021-30465 為例：不暫停時，2,000 次嘗試成功 603 次（約 30%）；暫停後，100 次有漏洞的執行全部重現，50 次已修補的執行全部正確標為已修補。只看「使用的結果」的簡單檢查器，曾把一個有漏洞版本的 800 次試驗全部誤判為已修補，Chronos 一次都沒有。在 runc 的一個 bug 上做 bisect，傳統重試法與 Git Bayesect 的中位數分別需要 475 與 398 次啟動，Chronos 只用了 7 次暫停試驗。27 次歷史 bisect 全部找到正確的分界版本。作者還在 chrony 與 rpm 中發現修補不完整，Debian 12 的一個 rpm 套件被追蹤系統標為已修補，實際上仍帶著那個不完整的修補。</p>
+<p><strong>限制。</strong> 每個新競態都要寫規格與 setup 腳本，部分情況還得改 Chronos 本身。判定只涵蓋規格宣告的那一個使用點和那一種設定。單次試驗就能下結論的保證，依賴幾個假設：被暫停的執行緒確實會停住、沒有其他行程同時改動相關狀態、目標只有一種方式到達那個使用點。作者只在執行時檢查了其中一部分。兩個 kernel 案例只能標出「有漏洞」，修補後的那一側一直是無法判定。實驗主要在特定 Linux 版本（6.17、7.0）上跑。</p>
+<p><strong>為什麼值得讀。</strong> OS 課講到 race condition，通常停在「加鎖」或「改用 file descriptor 版的 syscall（openat 之類）」。這篇示範的是工程上的另一面：怎麼把非決定性的 bug 變成決定性的測試，以及「測試通過」和「有證據證明已修好」是兩件不同的事。三值判定的想法，可以直接套到你自己專案裡任何 flaky test 的處理上。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>Chronos 為什麼不去縮短攻擊者的反應時間，而是暫停受害者？這帶來什麼保證？</li>
+<li>為什麼「無法判定」這個第三種標籤，對 bisect 和 CI 特別重要？</li>
+<li>列舉一個 Chronos 單次判定保證可能失效的情境。</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>暫停受害者，讓它停在「使用」之前，等攻擊者完成替換才放行，競態窗口實際上變成無限長，攻擊每次都會成立。所以一次試驗就能判斷該版本是否有漏洞，不必靠大量重試。</li>
+<li>只有兩種標籤時，攻擊沒成功就會被當成「已修補」。這正是那 800 次誤判的來源，會讓 bisect 找錯分界、讓 CI 放行仍有漏洞的版本。</li>
+<li>例如有其他行程同時修改相關的檔案系統狀態，或目標程式可以從多條路徑到達同一個使用點；論文的保證假設這些情況不存在，而且只部分在執行時檢查。</li>
+</ul>
+<h2>經典：The Working Set Model for Program Behavior</h2>
+<p><strong>Peter J. Denning</strong> · Communications of the ACM 11(5)，1968 · <a href="https://doi.org/10.1145/363095.363141">ACM DOI</a> · <a href="https://cs.uwaterloo.ca/~brecht/courses/epfl/Possible-Readings/vm-and-gc/working-set-model-denning-sosp-1967.pdf">1967 SOSP 版 PDF</a></p>
+<p><strong>背景。</strong> 1960 年代分時系統剛普及，虛擬記憶體讓多個程式共享實體記憶體，但系統常陷入 thrashing：記憶體被過度分配，每個行程都在缺頁，CPU 大部分時間在等磁碟搬頁面，幾乎沒有做有用的工作。當時的對策主要是在替換策略上做文章，例如 FIFO、LRU、隨機淘汰，或依賴編譯器與程式設計師提供提示。</p>
+<p><strong>核心想法。</strong> Denning 把問題從「淘汰哪一頁」換成「這個行程現在到底需要多少記憶體」。他定義行程在時間 t 的 working set W(t, τ)：過去 τ 這段時間窗內被存取過的頁面集合。τ 是可調的視窗長度，超過 τ 沒被碰過的頁面就可以移出。背後的假設是 locality（區域性）：程式在一段時間內只會集中使用一小部分頁面，所以最近的使用情況可以預測接下來的需求。</p>
+<p>由此推出排程規則：<strong>只有當一個行程的整個 working set 都能放進主記憶體時，才讓它執行</strong>。放不下就先不要讓它跑，因為讓它跑也只是在缺頁。當所有活躍行程的 working set 加起來超過記憶體時，就減少同時執行的行程數。這把記憶體管理和 CPU 排程綁在一起：「行程」和「working set」被視為同一個執行活動的兩面，系統要同時平衡處理器需求與記憶體需求。Denning 同年在 AFIPS 另一篇論文中直接用這個模型解釋 thrashing。</p>
+<p><strong>證據與當年的弱點。</strong> 這篇主要是概念與模型，不是實驗論文。後來的讀者常批評它沒有對 LRU 做量化比較，也沒有驗證對程式行為的統計假設。精確追蹤每個行程的 working set 也很昂貴，選 τ 不容易，而且論文沒有清楚說明 working set 大到超過可用記憶體時要怎麼處理。</p>
+<p><strong>什麼被取代了，什麼留下來。</strong> 精確的 working set 追蹤幾乎沒有直接實作，實務上被更便宜的近似取代，例如用參考位元做 aging、或用 CLOCK 類演算法掃描。但核心洞見留了下來：作業系統仍在估計每個行程的常駐集合大小（top 顯示的 RES 就是相關的量），用來決定配置與換出；同樣的想法也被用在資料庫的 buffer 管理上。本週第一篇的 TTL 近似也有同樣的影子：都是用「最近一段時間內有沒有被用到」來描述快取裡該留什麼。</p>
+<p><strong>為什麼現在還要讀。</strong> 它教的是一種思考方式：效能問題卡住時，先問「需求是什麼」，再談「策略怎麼選」。當你看到一台機器 CPU 使用率很低、磁碟卻忙個不停，或者容器因為記憶體上限頻繁被 OOM、swap，working set 就是你該先拿來想的那個概念。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>Denning 的排程規則如何防止 thrashing？</li>
+<li>為什麼 working set 模型在實務上大多以近似方式實作？</li>
+<li>working set 定義成立的關鍵假設是什麼？如果假設不成立會怎樣？</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>只在整個 working set 能放進記憶體時才讓行程執行；總需求超過記憶體時減少同時執行的行程數，避免每個行程都在缺頁。</li>
+<li>精確追蹤每個行程在 τ 視窗內用過的所有頁面成本太高，τ 也難選；所以改用參考位元的 aging 或 CLOCK 類掃描這類便宜的近似。</li>
+<li>關鍵是 locality：最近用過的頁面會繼續被用。如果程式的存取模式變化很快、沒有區域性，過去 τ 時間內的集合就預測不了未來的需求，模型就失效了。</li>
+</ul>
+<h2>如果只做一件事</h2>
+<p>去讀 Chronos 論文中定義三種判定標籤的那一節，然後想想你自己專案裡最惱人的 flaky test：它失敗時，你有沒有分清楚「確定有 bug」「確定沒 bug」和「這次沒測到」？把第三種情況獨立出來，往往比多重跑幾次更有用。</p>
+<h2>本次執行備註</h2>
+<ul class="plain">
+<li>原本考慮的 Kim 與 Nam〈Revisiting Index Performance under High Cache-Miss Penalties〉（arXiv:2611.21835）本次無法取得全文，無法確認數字，因此沒有採用。</li>
+<li>CLOCK(K) 論文的誤差只以圖表呈現，本文沒有引用具體誤差值。</li>
+<li>Denning 經典的內容依據摘要、書目資訊與課程討論頁整理；ACM 正式版需要訂閱。</li>
+</ul>
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>

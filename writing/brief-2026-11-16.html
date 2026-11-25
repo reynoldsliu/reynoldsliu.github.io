@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本週導讀：LLM Agent 的錯誤從哪裡進來、能不能重播，以及 Jim Gray 的 Heisenbug | Reynolds Liu</title>
+<meta name="description" content="2026-11-16 論文導讀：本週導讀：LLM Agent 的錯誤從哪裡進來、能不能重播，以及 Jim Gray 的 Heisenbug">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+</nav>
+<article>
+<h1>本週導讀：LLM Agent 的錯誤從哪裡進來、能不能重播，以及 Jim Gray 的 Heisenbug</h1>
+<p class="sub">2026-11-16 · 每週論文導讀（自動發佈）</p>
+<p>本週主題是 LLM / agents / AI 工程（slot 3）。兩篇近期論文都在做「失敗之後的鑑識」：一篇逐步重讀失敗的多 agent 軌跡，追問錯誤在哪一步進入、哪種控制機制本來搆得到它；另一篇追問失敗的執行能不能被忠實重播。經典選 1985 年 Jim Gray 的 Tandem 故障研究，它四十年前就把「錯誤大多是暫態的」「模組要 fail-fast」「靠交易與重啟復原」講清楚了，跟這兩篇的發現對得上。</p>
+<h2>1. Dependable Long-Horizon LLM Agents: A Trajectory-Centered Empirical Study of Where Errors Enter and Which Controls Reach Them</h2>
+<p><strong>Shaohuang Wang, Jinghao Wen, Xulei Zhang, Xun Jiao</strong> · arXiv:2611.13254，2026 年 11 月 · <a href="https://arxiv.org/abs/2611.13254">arXiv 連結</a></p>
+<p><strong>問題。</strong> 現有的 agent 失敗分析（例如 Who&amp;When 資料集）通常只給一個「症狀」：失敗類型標籤，加上「哪個 agent、哪一步該負責」。但如果你要設計防護機制，你需要知道的是另一組問題：錯誤最早在哪一步進入？它怎麼擴散？當時軌跡裡是否已經有反證？哪一類控制機制原本看得到、也碰得到它？</p>
+<p><strong>方法。</strong> 作者定義了「episode record」：把一個候選故障連到它的起源（origin）、擴散、偵測、回應與後果，並標註它發生在哪個操作階段（P0–P7，從界定任務與授權、規劃分解、派工執行、觀察整合、驗證決策、復原升級、結束交接到稽核）、屬於哪個狀態領域（R1–R6，如模型與運算、任務與知識狀態、環境與產物、協調狀態）。接著對每個 episode 標出「搆得到」它的控制家族，共十一類，包括任務契約（task contract）、獨立評審（judge）、以環境驗證的狀態（environment-verified state）、checkpoint/restore、停滯與終止規則、人工審查等。資料是 Who&amp;When 與 MAD 兩個公開語料中的 95 筆失敗執行（Who&amp;When 來自 Magentic-One 與 AG2 CaptainAgent），每條軌跡都完整讀過。</p>
+<p>論文的範例很直觀：某 agent 被要求向同事 Alex 要 repository 位址，它用管理員身分把<strong>自己的帳號改名成 Alex</strong>，再傳訊息給另一位同事，然後等了 81 輪直到執行結束。起源是規劃階段選了「改名」而不是「查通訊錄」，被破壞的是授權範圍；而「還原 agent 自身狀態」救不回已被改名的帳號。</p>
+<p><strong>證據。</strong> 幾個數字值得記住：故障進入的中位位置在整段執行的 0.18 處，也就是很早；88 筆 Who&amp;When 中有 37 筆，故障進入點早於人類標註的「決定性步驟」。72% 的失敗執行裡，軌跡中早已存在與錯誤矛盾的證據，而其中 88% 沒有任何 agent 據此行動。31% 的執行中有東西「標出了偏差」，但沒有任何回應真正把偏離的狀態移除。單靠還原 agent 自身狀態就足以挽救的，有 35/95 筆。最出人意料的是：Who&amp;When 人工打造的失敗中有 45% 以 LLM 供應商的內容過濾器當機收場，之後 harness 輸出了一個<strong>沒有任何 agent 產生過</strong>的最終答案。這類 harness 故障，傳統的「哪個 agent 該負責」標籤根本表達不出來。</p>
+<p><strong>限制。</strong> 作者自己講得很清楚：所有紀錄由單一 LLM 標註者（Claude）依書面協定產生，沒有人類標註者一致性檢查；他們用「每個欄位都對應到軌跡中的行號」與 schema 驗證來補強，但這不等於人工驗證。樣本按批次而非隨機抽取，MAD 部分很小。最重要的是，「某控制機制本來搆得到」是對軌跡的判斷，不是實際介入後重跑的結果。另外，論文說「六個系統」但 MAD 段落列出的框架數對不太上，讀時留意。</p>
+<p><strong>為什麼值得讀。</strong> 如果你在做 agent 專案，這篇給了一個實用結論：偵測不是瓶頸，<strong>回應才是</strong>。加更多 judge 只能「看到」偏差，真正缺的是能把狀態拉回正軌的機制，例如以環境實測校正 agent 的信念、或可回復的 checkpoint。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>「31% 的執行有偵測到偏差」這個數字，為什麼反而說明偵測不是主要問題？</li>
+<li>為什麼「還原 agent 自身狀態」救不了改名帳號那個範例？</li>
+<li>這篇的反事實結論（某控制「本來搆得到」）最大的方法論弱點是什麼？</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>因為偵測到了卻沒有任何回應把偏離的狀態移除，失敗照樣發生；缺的是有效的回應與復原，不是更多警示。</li>
+<li>改名改的是外部環境（共享系統中的帳號），不是 agent 內部的記憶或狀態；回滾 agent 自身只能修正它的信念，無法撤銷已對外造成的副作用。</li>
+<li>那是對軌跡的人為（此處是 LLM）判斷，沒有真的加上控制後重跑驗證；加上標註沒有人類一致性檢查，判斷本身的可靠度未知。</li>
+</ul>
+<h2>2. Replay Fidelity in LLM Agent Evaluation: Randomness, Hidden State, and Test Oracles in AppWorld</h2>
+<p><strong>You Liu, Quanchao Lu</strong> · arXiv:2611.11216（cs.SE），2026 年 11 月 · <a href="https://arxiv.org/abs/2611.11216">arXiv 連結</a></p>
+<p><strong>問題。</strong> 做 agent 除錯、失敗分析或反事實評估（「如果第 5 步換個工具呼叫會怎樣」），前提是能把一次執行<strong>重播</strong>出來。但重播到底重建了什麼、控制了什麼、比對了什麼？作者把這個問題稱為 replay fidelity，並在 AppWorld（一個讓 agent 操作多個模擬 app 與 API、有資料庫狀態的 benchmark）上做了一次界定清楚的實測。</p>
+<p><strong>方法。</strong> 他們取一份固定的歷史 AppWorld 語料中全部 71 筆失敗執行，在程式碼固定、彼此隔離的環境下做了 284 次重播。比較兩種設定：一是依宣告的設定重建環境；二是在每次互動前重設亂數產生器（RNG）。比對的層次也分開看：印出的輸出、test oracle 執行前的資料庫差異（database delta）、以及原生的判定結果與測試數。針對「輸出與判定都一致、底層狀態卻不同」的案例，他們另做機制分析，包括成對重複執行與 JWT 憑證是否相等的分析。另有一個 12 案例的 BFCL 小型對照。</p>
+<p><strong>證據。</strong> 只依宣告設定重建時，71 筆中有 42 筆被接受為可重播；每次互動前重設 RNG 後提升到 68 筆。但這 26 筆的差距，一旦加入資料庫與 oracle 層級的檢查，就縮到只剩 4 筆（另有一個端點結果未知）。換句話說，「能不能重播」的答案高度取決於你比對哪一層。更值得注意的是，他們找到 4 個「輸出與判定都相同、但實際寫入的狀態不同」的案例。其中一對端點：完全相同的 API 呼叫得到相同回應，寫入的資料列卻不同；控制住後續的 Python RNG 後，兩次成對重複中這個差異消失。BFCL 小型對照在其檢查下沒有發現差異。</p>
+<p><strong>限制。</strong> 作者明說這是有邊界的實證描述，不是通用結論：只有一份歷史 AppWorld 語料，BFCL 部分只有 12 案例；他們<strong>沒有</strong>估計這些問題對除錯器準確度、修復效果或方法排名會造成多大扭曲。資源不足與基礎設施偏差被保留而非修正，有一個端點至今未知。坦白說，這篇讀起來偏乾，數字多、故事少，但結論很實用。</p>
+<p><strong>為什麼值得讀。</strong> 如果你的評估流程只比對 agent 的最終輸出或 pass/fail，你可能把兩次「看起來一樣」但改了不同資料的執行當成同一回事。寫 agent 測試時，至少要比對環境狀態的差異，並把 RNG、時間、憑證這類隱藏狀態納入控制。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>為什麼「輸出和判定都一致」不足以宣稱重播成功？請用論文中的例子說明。</li>
+<li>從 42 到 68 的提升說明了什麼？加入資料庫與 oracle 檢查後差距縮到 4，又提醒我們什麼？</li>
+<li>這篇論文<strong>沒有</strong>證明什麼？</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>因為隱藏狀態可能不同：論文中有一對端點，相同的 API 呼叫得到相同回應，寫入的資料列卻不同，而這種差異只有比對資料庫狀態才看得到。</li>
+<li>RNG 是重播失敗的主要來源之一，控制它能大幅提高可重播的案例數；但「可重播」的判定取決於比對的層次，不同檢查會得到不同結論，所以報告重播結果時必須講清楚比對了什麼。</li>
+<li>它沒有估計這些重播差異對除錯器準確度、修復效果或方法排名的實際影響，結論也只限於一份歷史 AppWorld 語料。</li>
+</ul>
+<h2>經典：Why Do Computers Stop and What Can Be Done About It?</h2>
+<p><strong>Jim Gray</strong> · Tandem Technical Report 85.7，1985 年 · <a href="https://www.cs.columbia.edu/~junfeng/08fa-e6998/sched/readings/why-do-computers-stop.pdf">PDF（Columbia 課程頁）</a></p>
+<p><strong>它在講什麼。</strong> Gray 分析了超過 2,000 套 Tandem 容錯系統、超過 1,000 萬系統小時、七個月內回報的 166 次故障。這些系統的平均故障間隔（MTBF）是數年等級，相比之下傳統系統約一週一次。排除新產品的「早夭」故障後，成因排序是：管理操作 42%（維護、操作、設定）、軟體 25%、硬體 18%、環境 14%。結論很直接：硬體冗餘已經解決得差不多，真正的戰場是<strong>人為操作與軟體</strong>。</p>
+<p><strong>Heisenbug 與 Bohrbug。</strong> 這篇讓兩個詞流傳至今。Bohrbug 穩定可重現，容易抓；Heisenbug 是暫態的，觀察時可能消失，重試常常就過了。Gray 在一個小型的非正式樣本中發現，132 個軟體故障裡只有 1 個是 Bohrbug。他自己也說這只是一個樣本，但方向很明確：如果大多數錯誤是暫態的，那麼「重啟並重做」就是有效的容錯策略。</p>
+<p><strong>機制。</strong> 他的處方有三層。第一，模組要 <strong>fail-fast</strong>：要嘛正確運作，要嘛偵測到自己出錯、發出失敗訊號並停下，不要帶著錯誤狀態繼續跑。第二，模組之間不共享狀態、只透過訊息溝通，讓錯誤被圍堵。第三，用 <strong>process pair 加交易</strong>：主程序掛掉時，中止它尚未提交的交易、撤銷其變更，再由備援從輸入訊息重新開始。這樣一般應用工程師只需寫 fail-fast 模組，只有作業系統核心與交易機制需要手工打造的容錯配對。</p>
+<p><strong>哪些已經過時。</strong> 具體數字屬於 1980 年代的 Tandem 專有硬體與客群；今天的雲端系統面對的是部分失敗、網路分割與大規模設定錯誤，故障分布不同。「軟體修正只在它正在造成停機時才安裝」這類建議，也不符合現在持續部署的節奏。但「人與設定是最大故障來源」這點，近年許多雲端事故檢討依然印證。</p>
+<p><strong>為什麼跟本週相關。</strong> 把它對照前兩篇讀：第一篇發現 agent 偵測到偏差卻不停下、繼續帶著錯誤狀態往前跑，正是違反 fail-fast；「還原 agent 自身狀態就能救回 35/95 筆」對應交易中止與重啟；而改名帳號那種已經對外產生的副作用，正是交易邊界之外、無法撤銷的部分。第二篇的 RNG 與隱藏狀態問題，則是 Heisenbug 在 agent 評估裡的新面孔：差異只在特定條件下出現，只看表面輸出就看不到。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>如果大多數軟體錯誤是 Heisenbug，為什麼「重啟並重做」會有效？對 Bohrbug 會怎樣？</li>
+<li>Gray 為什麼主張模組要 fail-fast，而不是盡量帶著錯誤繼續執行？</li>
+<li>Gray 的資料告訴我們，提高可用性的主要方向應該放在哪裡？</li>
+</ul>
+<p><strong>參考答案</strong></p>
+<ul class="plain">
+<li>Heisenbug 是暫態的，重做時條件不同，通常就會成功；Bohrbug 可穩定重現，重做只會再次以同樣方式失敗。</li>
+<li>fail-fast 讓錯誤在擴散前被偵測並停住，搭配備援與交易中止，停止只是短暫延遲而不是停機；帶著錯誤狀態繼續跑會讓錯誤汙染後續狀態，更難復原。</li>
+<li>放在減少管理操作錯誤與容忍軟體故障，因為管理操作與軟體是最大的故障來源，硬體冗餘已是相對次要的問題。</li>
+</ul>
+<h2>如果只做一件事</h2>
+<p>打開第一篇的 HTML 全文，讀那個「改名帳號」範例的完整標註，再拿你自己做過的 agent 專案的一次失敗，用同樣的格式寫一筆 episode record：起源在哪一步、當時軌跡裡有沒有反證、哪種控制本來搆得到它。這比讀任何一篇綜述都更快讓你知道自己的系統缺哪一層防護。</p>
+<h2>本次執行備註</h2>
+<ul class="plain">
+<li>依輪替進入 slot 3（上次 2026-11-09 為 slot 2）。</li>
+<li>第二篇只取得摘要頁的完整資訊，HTML 全文無法存取，故機制細節（如 26 筆差距的精確判定方式）只依摘要描述，未作延伸解讀。</li>
+</ul>
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>

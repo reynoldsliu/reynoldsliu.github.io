@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本週導讀：從一次 read() 到一條查詢計畫——系統預設值何時會背叛你 | Reynolds Liu</title>
+<meta name="description" content="2026-10-12 論文導讀：本週導讀：從一次 read() 到一條查詢計畫——系統預設值何時會背叛你">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230d1117'/><text x='18' y='68' font-family='monospace' font-size='52' fill='%233fd68f'>&gt;_</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="top">
+  <a class="home" href="../index.html">reynoldsliu</a>
+  <a href="../index.html#projects">projects</a>
+  <a href="../index.html#writing">writing</a>
+  <a href="../index.html#contact">contact</a>
+</nav>
+<article>
+<h1>本週導讀：從一次 read() 到一條查詢計畫——系統預設值何時會背叛你</h1>
+<p class="sub">2026-10-12 · 每週論文導讀（自動發佈）</p>
+<p>本期是 CS 基礎（OS / DB）主題。兩篇近期論文都在處理同一件事：系統裡那些「校準一次就不再碰」的預設參數（Linux 的 readahead 視窗、查詢最佳化器的成本單位），在真實硬體與真實查詢上可能錯得很離譜。經典則選了這些成本單位的源頭：System R 的最佳化器論文。</p>
+<h2>1. Behind a Simple Read: Understanding Work and Waiting in the Linux I/O Stack</h2>
+<p><strong>Yang Shen, Kai Lu, Min Xie 等</strong> · arXiv:2610.10137（cs.OS），2026 年 10 月 · <a href="https://arxiv.org/abs/2610.10137">連結</a></p>
+<p><strong>問題。</strong> 對應用程式來說，read() 是最簡單的介面：給檔案、位移、長度，拿回資料。但在 Linux 內部，一次 buffered read 要經過 page cache、readahead、folio 配置、block layer 的合併與拆分，最後才到 NVMe 裝置。作者的核心主張是：介面語意一致，效能卻不可預測，而且「把某一層變快」不保證整個 read 變快。</p>
+<p><strong>方法。</strong> 作者把讀取路徑拆成三種成本：metadata 工作（folio 配置、XArray 查找與插入）、資料搬移（copy 到使用者緩衝區）、以及等待裝置。關鍵是區分「做了多少工作」和「有多少時間真的落在關鍵路徑上」。裝置端他們用一個很小的模型描述：對 n 個大小為 S 的請求，總時間 T = F + (n−1)S / B_CQ，其中 F 是第一個完成事件的等待時間，B_CQ 是之後的有效完成頻寬。接著追蹤 folio → bio → request 在合併、拆分、重新批次時的對應關係，就能從獨立量到的裝置參數，預測 block layer 和 read_pages 這兩層的等待時間。實驗在華為雲 Kunpeng 920 機器、Linux 6.6.58、XFS、本地 NVMe 上進行，另有一個實驗性的核心原型 MARS 與 MQSim SSD 模擬器。</p>
+<p><strong>證據。</strong> 幾個數字值得記住：</p>
+<ul class="plain">
+<li>fio 預設會下「隨機存取」建議（POSIX_FADV_RANDOM）。關掉它，讀取頻寬從 734.2 升到 1413.8 MiB/s，約 1.93 倍。原因不是 metadata 太貴（正常路徑只佔約 2.3–2.5%），而是 RANDOM 讓核心產生 32,768 個 4 KiB folio，而非約 1,000 個多為 128 KiB 的 folio，整個 I/O 形狀都變了。</li>
+<li>128 MiB 的 pread，預設 128 KiB readahead 視窗需 184.41 ms，改成 2 MiB 只要 50.47 ms（3.65 倍）。反直覺的是，把視窗設成「剛好等於需求大小」反而退化到 88.23 ms，因為掉進了 order-0 folio 路徑。</li>
+<li>加平行提交執行緒不一定有用：模型顯示單一執行緒已能供應約 77.4 GB/s 的請求，遠超裝置約 3.57 GB/s 的上限；實測兩個提交執行緒讓提交變快（0.867 → 0.500 ms），完整讀取反而變慢（30.09 → 33.68 ms）。</li>
+<li>跨層預測誤差在摘要中報告為 block layer 約 6.9%、read_pages 約 3.2% 以內，但內文部分配置誤差達 16.84%。</li>
+</ul>
+<p><strong>限制。</strong> 所有結論來自單一雲端機型、單一核心版本與 XFS；作者自己也說 77.4 GB/s 這類門檻不能移植。多項加速依賴 MARS 原型而非上游 Linux，SSD 內部機制的論證靠模擬器，真實裝置未必同構。範圍也限於同步、大緩衝區讀取。這篇比較像一份精細的量測與建模研究，而不是可以直接合入核心的補丁。</p>
+<p><strong>為什麼值得讀。</strong> 做系統作業或寫高效能服務時，「加執行緒」和「調大 buffer」是最常見的直覺。這篇用具體數字示範先找出等待落在哪一層，再決定要不要優化；方法本身（拆解工作 vs. 等待、用小模型預測跨層延遲）比特定數字更有遷移價值。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>為什麼 POSIX_FADV_RANDOM 會讓 128 MiB 冷讀取變慢約一倍，即使 metadata 成本只佔約 2–3%？</li>
+<li>加第二個提交執行緒讓「提交」變快，但完整讀取時間反而變長。用論文的模型怎麼解釋？</li>
+<li>如果要把這篇的 readahead 建議套到你自己的機器上，第一步該做什麼？</li>
+</ul>
+<h2>參考答案</h2>
+<ul class="plain">
+<li>RANDOM 建議改變了 folio 粒度，產生大量 4 KiB 小 folio，讓整個 I/O 請求形狀變差；瓶頸不在 metadata 本身，而在後續提交與裝置等待的方式。</li>
+<li>單一執行緒的請求供應能力已遠超裝置完成能力，瓶頸在裝置端；多一個執行緒只增加開銷，不縮短關鍵路徑上的等待。</li>
+<li>先在目標系統上校準裝置參數（如 F 與 B_CQ），因為作者明確指出這些常數依平台而異，2 MiB 這個值不能直接搬用。</li>
+</ul>
+<h2>2. Query Performance Tuning with Optimal Exploration of Optimizer Cost Model Parameter Space</h2>
+<p><strong>Wentao Wu, Xiaoying Wang, Vivek Narasayya, Surajit Chaudhuri</strong> · arXiv:2610.02607（cs.DB），2026 年 10 月 · <a href="https://arxiv.org/abs/2610.02607">連結</a></p>
+<p><strong>問題。</strong> 查詢最佳化器用公式估計每個執行計畫的成本，公式裡有一組「成本單位」，例如 PostgreSQL 的 seq_page_cost、random_page_cost、cpu_tuple_cost、cpu_index_tuple_cost、cpu_operator_cost。這些值通常是一次性設定的平台常數。近年有研究把它們當成每條查詢可調的「成本模型參數」（CMP），用隨機搜尋或貝氏最佳化去試，但這些方法沒有任何最佳性保證，每次跑結果也不同。</p>
+<p><strong>方法。</strong> 關鍵觀察是：計畫成本對 CMP 是線性的，cost(P) = n_P · c，n_P 是計畫的工作量計數向量，c 是 CMP 向量。由此可推出一個簡單但有力的性質：在一維區間上，如果兩端點最佳化器選的是同一個計畫，中間每一點也都是它。推廣到多維，就檢查超矩形 2^K 個頂點的計畫；全部相同就停，否則把每個維度對半切再遞迴（binary space partitioning），最多切 M 輪。實驗中固定 seq_page_cost = 1（只有相對值重要），其餘 4 個參數在預設值的 0.1 倍到 10 倍間變動，M = 2 對所有測試查詢已足夠。在「計畫成本唯一」與「最佳化器輸出確定」兩個假設下，這個程序是完備的：最佳計畫一定在候選集中。</p>
+<p>找出候選計畫後還得真的執行它們才知道誰最快，這是先前研究常忽略的成本。作者的主要做法是兩招合用：漸進式逾時（逾時從預設計畫的執行時間開始，每找到更快的計畫就收緊），以及瓶頸比對（執行完一個計畫後，取出佔執行時間比例高的運算子；任何尚未執行、且包含全部這些瓶頸運算子的計畫就跳過）。</p>
+<p><strong>證據。</strong> 在 PostgreSQL 17.4、冷快取下，以 TPC-H、TPC-DS、JOB、STATS 測試，對照預設設定、隨機搜尋與 SMAC 貝氏最佳化（各 100 次迭代）。整體工作負載時間：TPC-H sf=10 從預設 17.22 分鐘降到 9.92 分鐘，而隨機搜尋與貝氏最佳化約 14.3–14.4 分鐘；TPC-DS sf=10 從 171.68 降到 72.79 分鐘（貝氏最佳化為 75.96）。最戲劇性的是 TPC-H Q11：本方法改善 81%，另兩者只有 21%，因為只有窮盡式探索找到了那個約 4 秒的計畫，其餘候選多在 14 秒以上。不過在 JOB、STATS 上，三種方法差距很小，大部分收益其實來自「有調」而非「調得最佳」。</p>
+<p><strong>限制。</strong> 最佳化器呼叫次數約為 2^((M+1)K) 量級，參數一多就爆炸；目前是逐條查詢調整，還沒擴展到整個工作負載；PostgreSQL 在多表 join 時使用的遺傳演算法最佳化器不確定，違反了完備性假設。此外它不修正基數估計錯誤，只是在錯誤的估計下找出碰巧跑得快的計畫，作者也把它定位為互補而非替代。</p>
+<p><strong>為什麼值得讀。</strong> 「線性 → 檢查頂點就能確定整個區域」是一個漂亮且可遷移的推理，和參數化查詢最佳化、線性規劃的直覺一脈相承。實務上它也提醒你：資料庫的 random_page_cost 預設值是為旋轉硬碟時代設計的，在 SSD 上值得重新審視。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>為什麼成本對 CMP 線性，就能保證「兩端點同一計畫 → 整段同一計畫」？</li>
+<li>瓶頸比對剪枝背後的假設是什麼？什麼情況下它可能錯殺最佳計畫？</li>
+<li>為什麼在 JOB 與 STATS 上，本方法相對隨機搜尋的優勢不明顯？</li>
+</ul>
+<h2>參考答案</h2>
+<ul class="plain">
+<li>每個計畫的成本都是 CMP 的線性函數；若某計畫在兩端點都是最小，兩條直線（或超平面）的差在區間內不會變號，所以它在整段都保持最小。</li>
+<li>假設是：包含同樣高成本瓶頸運算子的計畫，執行時間不會比已執行的計畫好太多。若兩個計畫瓶頸相同但其他部分差異大，就可能誤剪。</li>
+<li>這些工作負載的計畫空間中，隨機搜尋的 100 次嘗試已大致涵蓋了好計畫；完備性的價值只在少數「好計畫藏在小區域」的查詢（如 TPC-H Q11）上才明顯。</li>
+</ul>
+<h2>經典：Access Path Selection in a Relational Database Management System</h2>
+<p><strong>P. Griffiths Selinger, M. M. Astrahan, D. D. Chamberlin, R. A. Lorie, T. G. Price</strong> · ACM SIGMOD，1979 · <a href="https://courses.cs.washington.edu/courses/cse444/25wi/papers/selinger79.pdf">PDF</a> · <a href="https://dl.acm.org/doi/10.1145/582095.582099">ACM DL</a></p>
+<p>這篇來自 IBM San Jose 的 System R 專案，是幾乎所有關聯式資料庫成本式最佳化器的祖先。它要回答的問題很直接：SQL 是宣告式的，使用者只說要什麼，系統要自己決定怎麼取資料：用哪個索引、表格以什麼順序 join、用什麼 join 演算法。</p>
+<p>論文的幾個想法到今天仍然是教科書內容。第一，成本模型：計畫成本表示為「頁面讀取數」加上一個權重乘以「呼叫 RSS（儲存層）的次數」，也就是 I/O 加上加權 CPU。本期第二篇論文調的正是這種權重的後代。第二，選擇率估計：用統計資訊（如表格大小、索引的不同值數量）估計每個謂詞會留下多少列；沒有統計時就用固定的預設比例。第三，也是最有影響力的，是用動態規劃搜尋 join 順序：先找出每個單表的最佳存取路徑，再逐步擴展到兩表、三表的組合，每個子集合只保留最便宜的計畫。為了避免剪錯，它引入了「有趣排序」（interesting orders）：如果某個較貴的子計畫產生了後續 ORDER BY 或 merge join 會用到的排序，就把它也保留下來。另一個實務性的剪枝是只考慮左深（left-deep）的 join 樹，並盡量避免笛卡兒積。</p>
+<p><strong>為什麼仍然重要。</strong> PostgreSQL、DB2、SQL Server 等系統的最佳化器骨架都還能看出這個結構；面試時被問到「資料庫怎麼決定 join 順序」，答案的核心就是這篇。它也確立了一個持續至今的分工：成本模型、基數估計、計畫搜尋三者分開設計。</p>
+<p><strong>哪些已被超越。</strong> 只考慮左深樹在現代大型分析查詢中太保守，許多系統會考慮 bushy plans；單欄位、獨立性假設的選擇率估計在相關欄位上錯得很嚴重，這正是後來直方圖、多欄統計與學習式基數估計的研究動機。成本模型裡固定的權重，則是本期第二篇論文試圖逐查詢調整的對象，四十多年後仍然沒有「一次校準就好」的答案。</p>
+<p><strong>自我檢核</strong></p>
+<ul class="plain">
+<li>動態規劃只保留每個表格子集合的最便宜計畫，為什麼還需要「有趣排序」？</li>
+<li>System R 的成本模型與第二篇論文的 CMP 有什麼關係？</li>
+</ul>
+<h2>參考答案</h2>
+<ul class="plain">
+<li>一個較貴的子計畫可能產生後續 merge join 或 ORDER BY 需要的排序，省下之後的排序成本；只保留最便宜的子計畫會把這種全域較優的選擇剪掉。</li>
+<li>System R 把成本表示為 I/O 頁數加上加權的 CPU 呼叫次數，權重是固定常數；第二篇論文中的 CMP 正是這類權重的現代版本，作者把它們從固定常數改為逐查詢可調的參數。</li>
+</ul>
+<h2>如果只做一件事</h2>
+<p>打開你常用的 PostgreSQL，執行 SHOW random_page_cost;（預設為 4），然後挑一條慢查詢，在 session 中把它調到 1.1 左右再看 EXPLAIN 的計畫是否改變。十分鐘內你會同時體會到 Selinger 的成本模型和本期第二篇論文在說什麼。</p>
+<h2>本期說明</h2>
+<ul class="plain">
+<li>主題輪替：上期為 slot 3（LLM / agents），本期為 slot 4（CS 基礎：OS / DB）。</li>
+<li>兩篇近期論文皆為 2026 年 10 月 arXiv 預印本，尚未經同儕審查；數字取自論文本文，未獨立重現。</li>
+<li>因發佈腳本僅支援基本 Markdown，本期未使用 YAML frontmatter 與 Obsidian 折疊 callout，參考答案以一般清單呈現。</li>
+</ul>
+<p><a class="back" href="../index.html">← cd ~</a></p>
+</article>
+</div>
+</body>
+</html>
